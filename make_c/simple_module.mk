@@ -50,8 +50,27 @@ MOD_NAME := $(notdir $(CURDIR))
 #####                                         INPUTS                                            ####
 ####################################################################################################
 
-# Source Inputs:
-# 
+###### VERY IMPORTANT ######
+# A simple module has TWO different categories of inputs. If you specify inputs in the incorrect
+# manner, this template may note work as expected!!!
+#
+# 1) Static Inputs
+#  		A "Static Input" is an input which should not meant to change via command line arguments.
+#  		The Makefile which includes this template should first specify the static inputs.
+#  		Think the names of source files.
+#  		These inputs are likely ALWAYS required to be specified, regardless of the target.
+#
+# 2) Dynamic Inputs
+#  		A "Dynamic Input" is meant to be specified on the command line when the including Makefile
+#  		is invoked. Think build directory.
+#  		A "Dynamic Input" may be required for one target, but not for another.
+#  		For example, a build directory should not be required for printing out usage instructions!
+#
+# The idea here is to make a distinction between when should be specified when invoking the 
+# including Makefile, and what is actually just declared in the including Makefile.
+
+######################################## Static Inputs #############################################
+
 # C_SRC_NAMES - Names of all `.c` source files that should be compiled from $(MOD_NAME)/src.
 # S_SRC_NAMES - Names of all `.S` source files that should be compiled from $(MOD_NAME)/src.
 # C_TEST_SRC_NAMES - Names of all `.c` source files that should be compiled from $(MOD_NAME)/test.
@@ -75,8 +94,9 @@ endif
 TEST_DIR 	:= $(CURDIR)/test
 C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 
-# Target Inputs:
-#
+
+####################################### Dynamic Inputs #############################################
+
 # BUILD_DIR - See build directory structure above!
 
 ifeq ($(BUILD_DIR),)
@@ -92,9 +112,5 @@ C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/c_test_%.o,$(C_TEST_SRC_NAMES))
 
 DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
 
-
 ####################################################################################################
-
-# Ok, now what? Target information?
-# Dependencies?
 
