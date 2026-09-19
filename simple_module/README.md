@@ -7,10 +7,6 @@ files.
 
 A simple module expects the following structure.
 
-__NOTE__ A simple module needs at least 1 source file. (This can be an assembly or C file)
-
-__ALSO NOTE__ A simple module needs at least 1 test source file. (Test sources are always C files)
-
 ```
 <module name>/
     include/
@@ -35,3 +31,12 @@ __ALSO NOTE__ A simple module needs at least 1 test source file. (Test sources a
         ...
     Makefile (includes simple_module.mk)
 ```
+
+Some things to note:
+* The module name of a simple module is inferred from its directory name.
+* A simple module needs at least 1 source file. (This can be an assembly or C file)
+* A simple module needs at least 1 test source file. (Test sources are always C files)
+* When objects are compiled, their names are mangled to prevent collision of object files. 
+A `src/file.c`, `src/file.S`, and `test/file.c` can all be declared within a single module without
+any issues!
+
