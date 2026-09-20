@@ -168,7 +168,14 @@ C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 
 ######################################## Flag Resolution ###########################################
 
+# Getting include directory paths from dependencies is a slow operation.
+# This is the list of targets that need these paths.
+DEPS_RES_TARGETS 	:= includes clangd dotds objs
+
+ifneq ($(filter $(DEPS_RES_TARGETS),$(MAKECMDGOALS)),) 
 DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) includes))
+endif
+
 ALL_INCS  		:= $(INC_DIR) $(DEPS_INCS) $(INCS)
 
 .PHONY: includes
@@ -200,15 +207,75 @@ C_TEST_PREFIX 	:= c_test_
 
 BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
 
+# List of targets which require BUILD_DIR be specified!
+BUILD_DIR_TARGETS := clean dotds test_dotds
+
+ifneq ($(filter $(BUILD_DIR_TARGETS),$(MAKECMDGOALS)),) 
+ifeq ($(BUILD_DIR),)
+$(error BUILD_DIR must be specified for requested target(s))
+endif
+endif
+
+.PHONY: clean
+clean: 
+	rm -rf $(BUILD_MOD_DIR)
+
+### .d files
+
+DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
 OBJS_DIR 		:= $(BUILD_MOD_DIR)/objs
+
+C_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(C_PREFIX)%.d,$(C_SRC_NAMES))
+S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
+C_TEST_DOTDS  	:= $(patsubst %,$(DOTDS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
+ALL_DOTDS 		:= $(C_DOTDS) $(S_DOTDS) $(C_TEST_DOTDS)
+
+$(DOTDS_DIR):
+	mkdir -p $@
+
+$(C_DOTDS): $(DOTDS_DIR)/$(C_PREFIX)%.d: $(SRC_DIR)/%.c | $(DOTDS_DIR)
+	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_PREFIX)$*.o" -MF $@
+
+$(S_DOTDS): $(DOTDS_DIR)/$(S_PREFIX)%.d: $(SRC_DIR)/%.S | $(DOTDS_DIR)
+	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(S_PREFIX)$*.o" -MF $@
+
+.PHONY: dotds
+dotds: $(C_DOTDS) $(S_DOTDS)
+
+# List of targets which require C_DOTDS and S_DOTDS be built and included!
+DOTDS_TARGETS :=
+ifneq ($(filter $(DOTDS_TARGETS),$(MAKECMDGOALS)),) 
+include $(C_DOTDS) $(S_DOTDS)
+endif
+
+$(C_TEST_DOTDS): $(DOTDS_DIR)/$(C_TEST_PREFIX)%.d: $(TEST_DIR)/%.c | $(DOTDS_DIR)
+	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_TEST_PREFIX)$*.o" -MF $@
+
+.PHONY: test_dotds
+test_dotds: $(C_TEST_DOTDS)
+
+# List of targets which require C_TEST_DOTDS be built and included!
+TEST_DOTDS_TARGETS :=
+ifneq ($(filter $(TEST_DOTDS_TARGETS),$(MAKECMDGOALS)),) 
+include $(C_TEST_DOTDS)
+endif
+
+### .o files
+
 C_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(C_PREFIX)%.o,$(C_SRC_NAMES))
 S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
 C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
+ALL_OBJS 		:= $(C_OBJS) $(S_OBJS) $(C_TEST_OBJS)
 
-DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
-C_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(C_PREFIX)%.d,$(C_SRC_NAMES))
-S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
-C_TEST_DOTDS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
+ifneq ($(filter objs,$(MAKECMDGOALS)),)
+ifeq ($(BUILD_DIR),)
+$(error `objs` requires a build directory)
+endif
+include $(ALL_DOTDS)
+endif
+
+.PHONY: objs
+objs: $(ALL_OBJS)
 
 
 
