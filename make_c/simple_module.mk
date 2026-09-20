@@ -43,13 +43,6 @@
 #     lib$(MOD_NAME).a
 #     libtest_$(MOD_NAME).a
 
-# Module name is inferred!
-MOD_NAME := $(notdir $(CURDIR))
-
-C_PREFIX 		:= c_
-S_PREFIX 		:= S_
-C_TEST_PREFIX 	:= c_test_
-
 ####################################################################################################
 #####                                         INPUTS                                            ####
 ####################################################################################################
@@ -73,6 +66,10 @@ C_TEST_PREFIX 	:= c_test_
 # The idea here is to make a distinction between when should be specified when invoking the 
 # including Makefile, and what is actually just declared in the including Makefile.
 
+# NOTE: In the "Inputs" sections below I organize definitions in a way I find intuitive.
+# The comments are what define the actual expected inputs.
+# For example, `INC_DIR` below is not an input, but `C_SRC_NAMES` is!
+
 ######################################## Static Inputs #############################################
 
 # C_SRC_NAMES
@@ -88,20 +85,13 @@ C_TEST_PREFIX 	:= c_test_
 # It is understood that S_SRC_NAMES := my_src refers to $(MOD_NAME)/src/my_src.S.
 # Extensions are inferred!
 
-ifeq ($(C_SRC_NAMES)$(S_SRC_NAMES),)
-$(error At least 1 `.c` or `.S` source file must be specified)
-endif
-
-SRC_DIR 	:= $(CURDIR)/src
-C_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.c,$(C_SRC_NAMES))
-S_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.S,$(S_SRC_NAMES))
-
-ifeq ($(C_TEST_SRC_NAMES),)
-$(error At least 1 `.c` test source file must be specified)
-endif
-
-TEST_DIR 	:= $(CURDIR)/test
-C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
+# DESIGN NOTE:
+# There have been build tools I've designed which allow for specifying headers individually.
+# The idea being that configuration files could conditionally select which headers
+# to specify in the including Makefile.
+# In the design here though, I have decided against going down this path.
+# Header files are never copied out of their original include directories and modules always
+# give access to ALL headers in their include directory.
 
 # DEPS
 #  		A list of absolute paths to other modules which this module depends on.
@@ -125,26 +115,10 @@ C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 # SFLAGS
 #  		A list of S compile flags to be specified when compiling `.S` files.
 
-
 ####################################### Dynamic Inputs #############################################
 
-# BUILD_DIR - See build directory structure above!
-
-ifeq ($(BUILD_DIR),)
-$(error Build directory not specified)
-endif
-
-BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
-
-OBJS_DIR 		:= $(BUILD_MOD_DIR)/objs
-C_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(C_PREFIX)%.o,$(C_SRC_NAMES))
-S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
-C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
-
-DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
-C_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(C_PREFIX)%.d,$(C_SRC_NAMES))
-S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
-C_TEST_DOTDS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
+# BUILD_DIR 
+#  		See build directory structure above!
 
 # EXTRA_CFLAGS
 #  		If for some reason you want to add more flags when building, use this instead of 
@@ -152,7 +126,6 @@ C_TEST_DOTDS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAME
 #
 # EXTRA_SFLAGS
 #  		Just like EXTRA_CFLAGS, but for compiling the assembly files.
-#
 
 #################################### Dynamic/Static Inputs #########################################
 
@@ -170,4 +143,174 @@ ARCHIVER ?= ar
 # NOTE: I don't use the builtins AR or CC here because I don't like how those are always defined.
 
 ####################################################################################################
+#####                                        TARGETS                                            ####
+####################################################################################################
 
+# VERY IMPORTANT: ALWAYS invoke phony targets below! NEVER request to build a specific file!
+
+################################## Basic Module Organization #######################################
+
+# Module name is inferred!
+MOD_NAME := $(notdir $(CURDIR))
+
+INC_DIR 	:= $(CURDIR)/include
+SRC_DIR		:= $(CURDIR)/src
+TEST_DIR 	:= $(CURDIR)/test
+
+.PHONY: construct
+construct:
+	mkdir -p $(INC_DIR)/$(MOD_NAME)/test
+	mkdir -p $(SRC_DIR)
+	mkdir -p $(TEST_DIR)
+
+C_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.c,$(C_SRC_NAMES))
+S_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.S,$(S_SRC_NAMES))
+C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
+
+######################################## Flag Resolution ###########################################
+
+# Getting include directory paths from dependencies is a slow operation.
+# This is the list of targets that need these paths.
+DEPS_RES_TARGETS 	:= includes clangd dotds test_dotds objs test_objs lib test_lib
+
+ifneq ($(filter $(DEPS_RES_TARGETS),$(MAKECMDGOALS)),) 
+DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) includes))
+endif
+
+ALL_INCS  		:= $(INC_DIR) $(DEPS_INCS) $(INCS)
+
+.PHONY: includes
+includes:
+	@echo "$(ALL_INCS)"
+
+ALL_INCS_FLAGS 	:= $(addprefix -I,$(ALL_INCS))
+
+ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS) $(ALL_INCS_FLAGS)
+ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS) $(ALL_INCS_FLAGS)
+
+CLANGD := $(CURDIR)/.clangd
+$(CLANGD):
+	echo "CompileFlags:" > $@
+	echo "  Compiler: $(COMPILER)" >> $@
+	echo "  Add:" >> $@
+	$(foreach f,$(ALL_CFLAGS),echo "    - $(f)" >> $@;)
+
+.PHONY: clangd clangd_clean
+clangd: $(CLANGD)
+clangd_clean:
+	rm -f $(CLANGD)
+
+########################################## Compilation #############################################
+
+C_PREFIX 		:= c_
+S_PREFIX 		:= S_
+C_TEST_PREFIX 	:= c_test_
+
+BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
+
+# List of targets which require BUILD_DIR be specified!
+BUILD_DIR_TARGETS := clean dotds test_dotds objs test_objs lib test_lib
+
+ifneq ($(filter $(BUILD_DIR_TARGETS),$(MAKECMDGOALS)),) 
+ifeq ($(BUILD_DIR),)
+$(error BUILD_DIR must be specified for requested target(s))
+endif
+endif
+
+.PHONY: clean
+clean: 
+	rm -rf $(BUILD_MOD_DIR)
+
+DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
+OBJS_DIR 		:= $(BUILD_MOD_DIR)/objs
+
+$(DOTDS_DIR) $(OBJS_DIR):
+	mkdir -p $@
+
+### .d files
+
+C_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(C_PREFIX)%.d,$(C_SRC_NAMES))
+S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
+C_TEST_DOTDS  	:= $(patsubst %,$(DOTDS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
+
+$(C_DOTDS): $(DOTDS_DIR)/$(C_PREFIX)%.d: $(SRC_DIR)/%.c | $(DOTDS_DIR)
+	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_PREFIX)$*.o" -MF $@
+
+$(S_DOTDS): $(DOTDS_DIR)/$(S_PREFIX)%.d: $(SRC_DIR)/%.S | $(DOTDS_DIR)
+	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(S_PREFIX)$*.o" -MF $@
+
+.PHONY: dotds
+dotds: $(C_DOTDS) $(S_DOTDS)
+	@echo > /dev/null
+
+# List of targets which require C_DOTDS and S_DOTDS be built and included!
+DOTDS_TARGETS := objs lib
+ifneq ($(filter $(DOTDS_TARGETS),$(MAKECMDGOALS)),) 
+include $(C_DOTDS) $(S_DOTDS)
+endif
+
+$(C_TEST_DOTDS): $(DOTDS_DIR)/$(C_TEST_PREFIX)%.d: $(TEST_DIR)/%.c | $(DOTDS_DIR)
+	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_TEST_PREFIX)$*.o" -MF $@
+
+.PHONY: test_dotds
+test_dotds: $(C_TEST_DOTDS)
+	@echo > /dev/null
+
+# List of targets which require C_TEST_DOTDS be built and included!
+TEST_DOTDS_TARGETS := test_objs test_lib
+ifneq ($(filter $(TEST_DOTDS_TARGETS),$(MAKECMDGOALS)),) 
+include $(C_TEST_DOTDS)
+endif
+
+### .o files
+
+C_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(C_PREFIX)%.o,$(C_SRC_NAMES))
+S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
+C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
+
+$(C_OBJS): $(OBJS_DIR)/$(C_PREFIX)%.o: | $(OBJS_DIR)
+	$(COMPILER) $(ALL_CFLAGS) -c $(SRC_DIR)/$*.c -o $@
+
+$(S_OBJS): $(OBJS_DIR)/$(S_PREFIX)%.o: | $(OBJS_DIR)
+	$(COMPILER) $(ALL_SFLAGS) -c $(SRC_DIR)/$*.S -o $@
+
+.PHONY: objs
+objs: $(C_OBJS) $(S_OBJS)
+	@echo > /dev/null
+
+$(C_TEST_OBJS): $(OBJS_DIR)/$(C_TEST_PREFIX)%.o: | $(OBJS_DIR)
+	$(COMPILER) $(ALL_CFLAGS) -c $(TEST_DIR)/$*.c -o $@
+
+.PHONY: test_objs
+test_objs: $(C_TEST_OBJS)
+	@echo > /dev/null
+
+######################################### Packaging ################################################
+
+# List of targets which require INSTALL_DIR be specified!
+INSTALL_DIR_TARGETS := lib test_lib
+ifneq ($(filter $(INSTALL_DIR_TARGETS),$(MAKECMDGOALS)),) 
+ifeq ($(INSTALL_DIR),)
+$(error INSTALL_DIR must be specified for requested target(s))
+endif
+endif
+
+LIB  	 := $(INSTALL_DIR)/lib$(MOD_NAME).a
+TEST_LIB := $(INSTALL_DIR)/libtest_$(MOD_NAME).a
+
+$(INSTALL_DIR):
+	mkdir -p $@
+
+$(LIB): $(C_OBJS) $(S_OBJS) | $(INSTALL_DIR)
+	$(ARCHIVER) rcs $@ $^
+
+.PHONY: lib
+lib: $(LIB)
+	@echo > /dev/null
+
+$(TEST_LIB): $(C_TEST_OBJS) | $(INSTALL_DIR)
+	$(ARCHIVER) rcs $@ $^
+
+.PHONY: test_lib
+test_lib: $(TEST_LIB)
+	@echo > /dev/null
