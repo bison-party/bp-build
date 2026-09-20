@@ -146,6 +146,7 @@ ARCHIVER ?= ar
 #####                                        TARGETS                                            ####
 ####################################################################################################
 
+# VERY IMPORTANT: ALWAYS invoke phony targets below! NEVER request to build a specific file!
 
 ################################## Basic Module Organization #######################################
 
@@ -170,7 +171,7 @@ C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 
 # Getting include directory paths from dependencies is a slow operation.
 # This is the list of targets that need these paths.
-DEPS_RES_TARGETS 	:= includes clangd dotds objs
+DEPS_RES_TARGETS 	:= includes clangd dotds test_dotds objs test_objs lib test_lib
 
 ifneq ($(filter $(DEPS_RES_TARGETS),$(MAKECMDGOALS)),) 
 DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) includes))
@@ -208,7 +209,7 @@ C_TEST_PREFIX 	:= c_test_
 BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
 
 # List of targets which require BUILD_DIR be specified!
-BUILD_DIR_TARGETS := clean dotds test_dotds
+BUILD_DIR_TARGETS := clean dotds test_dotds objs test_objs lib test_lib
 
 ifneq ($(filter $(BUILD_DIR_TARGETS),$(MAKECMDGOALS)),) 
 ifeq ($(BUILD_DIR),)
@@ -220,18 +221,17 @@ endif
 clean: 
 	rm -rf $(BUILD_MOD_DIR)
 
-### .d files
-
 DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
 OBJS_DIR 		:= $(BUILD_MOD_DIR)/objs
+
+$(DOTDS_DIR) $(OBJS_DIR):
+	mkdir -p $@
+
+### .d files
 
 C_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(C_PREFIX)%.d,$(C_SRC_NAMES))
 S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
 C_TEST_DOTDS  	:= $(patsubst %,$(DOTDS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
-ALL_DOTDS 		:= $(C_DOTDS) $(S_DOTDS) $(C_TEST_DOTDS)
-
-$(DOTDS_DIR):
-	mkdir -p $@
 
 $(C_DOTDS): $(DOTDS_DIR)/$(C_PREFIX)%.d: $(SRC_DIR)/%.c | $(DOTDS_DIR)
 	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_PREFIX)$*.o" -MF $@
@@ -241,9 +241,10 @@ $(S_DOTDS): $(DOTDS_DIR)/$(S_PREFIX)%.d: $(SRC_DIR)/%.S | $(DOTDS_DIR)
 
 .PHONY: dotds
 dotds: $(C_DOTDS) $(S_DOTDS)
+	@echo > /dev/null
 
 # List of targets which require C_DOTDS and S_DOTDS be built and included!
-DOTDS_TARGETS :=
+DOTDS_TARGETS := objs lib
 ifneq ($(filter $(DOTDS_TARGETS),$(MAKECMDGOALS)),) 
 include $(C_DOTDS) $(S_DOTDS)
 endif
@@ -253,9 +254,10 @@ $(C_TEST_DOTDS): $(DOTDS_DIR)/$(C_TEST_PREFIX)%.d: $(TEST_DIR)/%.c | $(DOTDS_DIR
 
 .PHONY: test_dotds
 test_dotds: $(C_TEST_DOTDS)
+	@echo > /dev/null
 
 # List of targets which require C_TEST_DOTDS be built and included!
-TEST_DOTDS_TARGETS :=
+TEST_DOTDS_TARGETS := test_objs test_lib
 ifneq ($(filter $(TEST_DOTDS_TARGETS),$(MAKECMDGOALS)),) 
 include $(C_TEST_DOTDS)
 endif
@@ -265,17 +267,50 @@ endif
 C_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(C_PREFIX)%.o,$(C_SRC_NAMES))
 S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
 C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
-ALL_OBJS 		:= $(C_OBJS) $(S_OBJS) $(C_TEST_OBJS)
 
-ifneq ($(filter objs,$(MAKECMDGOALS)),)
-ifeq ($(BUILD_DIR),)
-$(error `objs` requires a build directory)
-endif
-include $(ALL_DOTDS)
-endif
+$(C_OBJS): $(OBJS_DIR)/$(C_PREFIX)%.o: | $(OBJS_DIR)
+	$(COMPILER) $(ALL_CFLAGS) -c $(SRC_DIR)/$*.c -o $@
+
+$(S_OBJS): $(OBJS_DIR)/$(S_PREFIX)%.o: | $(OBJS_DIR)
+	$(COMPILER) $(ALL_SFLAGS) -c $(SRC_DIR)/$*.S -o $@
 
 .PHONY: objs
-objs: $(ALL_OBJS)
+objs: $(C_OBJS) $(S_OBJS)
+	@echo > /dev/null
 
+$(C_TEST_OBJS): $(OBJS_DIR)/$(C_TEST_PREFIX)%.o: | $(OBJS_DIR)
+	$(COMPILER) $(ALL_CFLAGS) -c $(TEST_DIR)/$*.c -o $@
 
+.PHONY: test_objs
+test_objs: $(C_TEST_OBJS)
+	@echo > /dev/null
 
+######################################### Packaging ################################################
+
+# List of targets which require INSTALL_DIR be specified!
+INSTALL_DIR_TARGETS := lib test_lib
+ifneq ($(filter $(INSTALL_DIR_TARGETS),$(MAKECMDGOALS)),) 
+ifeq ($(INSTALL_DIR),)
+$(error INSTALL_DIR must be specified for requested target(s))
+endif
+endif
+
+LIB  	 := $(INSTALL_DIR)/lib$(MOD_NAME).a
+TEST_LIB := $(INSTALL_DIR)/libtest_$(MOD_NAME).a
+
+$(INSTALL_DIR):
+	mkdir -p $@
+
+$(LIB): $(C_OBJS) $(S_OBJS) | $(INSTALL_DIR)
+	$(ARCHIVER) rcs $@ $^
+
+.PHONY: lib
+lib: $(LIB)
+	@echo > /dev/null
+
+$(TEST_LIB): $(C_TEST_OBJS) | $(INSTALL_DIR)
+	$(ARCHIVER) rcs $@ $^
+
+.PHONY: test_lib
+test_lib: $(TEST_LIB)
+	@echo > /dev/null
