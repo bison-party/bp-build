@@ -1,7 +1,34 @@
 
-# Simple Module 
+####################################################################################################
+#####                                     EXPECTED USAGE                                        ####
+####################################################################################################
 #
-# Expected Directory Structure:
+# Module Requirements:
+#
+# module.mk is meant to be included! The including Makefile must specify a few things before
+# inclusion of module.mk.
+#
+# 1) Before `include path/to/module.mk`, the module writer must first declare necessary 
+# "Static Inputs" in the including Makefile. (See the INPUTS section below)
+# 2) Before `include path/to/module.mk`, the module writer must `include path/to/colors.mk`.
+# This is a helper makefile found at the top level of the `bp-build` repo. It declares macros
+# which are used for pretty printing. 
+# 3) The including Makefile must live in a directory with structure outlined in the 
+# "Required Directory Structure" section below.
+#
+# An example valid module Makefile could look something like this:
+#
+# ```
+# STATIC_INPUT_1 := my_input_1
+# STATIC_INPUT_2 := my_input_2
+# ...
+# STATIC_INPUT_N := my_input_N
+#
+# include path/to/colors.mk
+# include path/to/module.mk
+# ```
+#
+# Required Directory Structure:
 #
 # $(MOD_NAME)/
 #   include/
@@ -24,15 +51,23 @@
 #     test_src_1.c
 #     test_src_2.c
 #     ...
-#   Makefile (includes simple_module.mk)
+#   Makefile (includes module.mk)
 #
 # Some things to note:
-# * The module name of a simple module is inferred from its directory name.
+# * The name of a module is inferred from its directory name.
 # * When sources are compiled, their names are mangled to prevent collision of object files. 
 # A `src/file.c`, `src/file.S`, and `test/file.c` can all be declared within a single module without
 # any issues!
 #
-# Build Directory Structure:
+#
+####################################################################################################
+#####                                 PRIMARY BUILD OUTPUTS                                     ####
+####################################################################################################
+
+# The most important outputs of module.mk are placed in BUILD_DIR and INSTALL_DIR.
+# (BUILD_DIR and INSTALL_DIR are both intended to be provided as "Dynamic Inputs", see below)
+
+# BUILD_DIR Generated Structure:
 #
 # $(BUILD_DIR)/
 #   $(MOD_NAME)/
@@ -40,19 +75,23 @@
 #       *.d
 #     objs/ 
 #       *.o 
-#     lib$(MOD_NAME).a
-#     libtest_$(MOD_NAME).a
+#
+# INSTALL_DIR Generated Structure:
+#
+# $(INSTALL_DIR)/
+#   lib$(MOD_NAME).a
+#   libtest_$(MOD_NAME).a
 
 ####################################################################################################
 #####                                         INPUTS                                            ####
 ####################################################################################################
 
 ###### VERY IMPORTANT ######
-# A simple module has TWO different categories of inputs. If you specify inputs in the incorrect
-# manner, this template may note work as expected!!!
+# A module has TWO different categories of inputs. If you specify inputs in the incorrect
+# manner, this template may not work as expected!!!
 #
 # 1) Static Inputs
-#  		A "Static Input" is an input which should not meant to change via command line arguments.
+#  		A "Static Input" is an input which is not meant to change via command line arguments.
 #  		The Makefile which includes this template should first specify the static inputs.
 #  		Think the names of source files.
 #  		These inputs are likely ALWAYS required to be specified, regardless of the target.
@@ -63,12 +102,8 @@
 #  		A "Dynamic Input" may be required for one target, but not for another.
 #  		For example, a build directory should not be required for printing out usage instructions!
 #
-# The idea here is to make a distinction between when should be specified when invoking the 
+# The idea here is to make a distinction between what should be specified when invoking the 
 # including Makefile, and what is actually just declared in the including Makefile.
-
-# NOTE: In the "Inputs" sections below I organize definitions in a way I find intuitive.
-# The comments are what define the actual expected inputs.
-# For example, `INC_DIR` below is not an input, but `C_SRC_NAMES` is!
 
 ######################################## Static Inputs #############################################
 
@@ -95,7 +130,6 @@
 
 # DEPS
 #  		A list of absolute paths to other modules which this module depends on.
-#  		In this context a "module" does NOT need to be a simple module.
 #  		A "module" in this context is just a directory with a Makefile which specifies target
 #  		"includes". This target should print the path of all include directories inside the module
 #  		and depended on by the module.
@@ -119,6 +153,9 @@
 
 # BUILD_DIR 
 #  		See build directory structure above!
+#
+# INSTALL_DIR 
+#  		See install directory structure above!
 
 # EXTRA_CFLAGS
 #  		If for some reason you want to add more flags when building, use this instead of 
@@ -158,8 +195,6 @@ MOD_NAME := $(notdir $(CURDIR))
 help::
 	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(MOD_NAME)$(STYLE_RESET)"
 
-# Some quick stylictic things
-
 ifndef VERBOSE
 Q := @
 endif
@@ -178,7 +213,7 @@ construct:
 	$Qmkdir -p $(TEST_DIR)
 
 help::
-	$(call USAGE_MSG,construct,create expected simple module directory structure)
+	$(call USAGE_MSG,construct,create expected module directory structure)
 
 C_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.c,$(C_SRC_NAMES))
 S_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.S,$(S_SRC_NAMES))
@@ -268,11 +303,11 @@ S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
 C_TEST_DOTDS  	:= $(patsubst %,$(DOTDS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
 
 $(C_DOTDS): $(DOTDS_DIR)/$(C_PREFIX)%.d: $(SRC_DIR)/%.c | $(DOTDS_DIR)
-	$(call GEN_MSG,$@)
+	$(call DOTD_MSG,$@)
 	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_PREFIX)$*.o" -MF $@
 
 $(S_DOTDS): $(DOTDS_DIR)/$(S_PREFIX)%.d: $(SRC_DIR)/%.S | $(DOTDS_DIR)
-	$(call GEN_MSG,$@)
+	$(call DOTD_MSG,$@)
 	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(S_PREFIX)$*.o" -MF $@
 
 .PHONY: dotds
@@ -289,7 +324,7 @@ include $(C_DOTDS) $(S_DOTDS)
 endif
 
 $(C_TEST_DOTDS): $(DOTDS_DIR)/$(C_TEST_PREFIX)%.d: $(TEST_DIR)/%.c | $(DOTDS_DIR)
-	$(call GEN_MSG,$@)
+	$(call DOTD_MSG,$@)
 	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_TEST_PREFIX)$*.o" -MF $@
 
 .PHONY: test_dotds
