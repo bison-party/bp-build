@@ -56,4 +56,17 @@ STYLE_BG_BRIGHT_WHITE := $(STYLE_ESC)[107m
 endif
 
 USAGE_MSG = @printf "  $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%-16.16s$(STYLE_RESET) %s\n" "$1" "$2";
-DONE_MSG  = @echo -e "$(STYLE_BOLD)$(STYLE_BRIGHT_GREEN)$1$(STYLE_RESET)"
+
+GET_TIME = $(shell date '+%H:%M:%S')
+
+# $1 - Name of Action
+# $2 - Style of Action
+# $3 - Action description
+ACTION_MSG = @printf "$(STYLE_BOLD)$(STYLE_BRIGHT_BLACK)%s$(STYLE_RESET)  $2%-10.10s$(STYLE_RESET) $(STYLE_ITALIC)%s$(STYLE_RESET)\n" \
+			 "$(GET_TIME)" "$1" "$3"
+
+CLEAN_MSG 	= $(call ACTION_MSG,CLEAN,$(STYLE_BLUE),$1)
+GEN_MSG   	= $(call ACTION_MSG,GEN,$(STYLE_GREEN),$1)
+ASM_MSG   	= $(call ACTION_MSG,ASM,$(STYLE_RED),$1)
+COMPILE_MSG = $(call ACTION_MSG,COMPILE,$(STYLE_CYAN),$1)
+PACKAGE_MSG = $(call ACTION_MSG,PACKAGE,$(STYLE_YELLOW),$1)

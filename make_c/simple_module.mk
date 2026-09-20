@@ -158,6 +158,8 @@ MOD_NAME := $(notdir $(CURDIR))
 help::
 	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(MOD_NAME)$(STYLE_RESET)"
 
+# Some quick stylictic things
+
 ifndef VERBOSE
 Q := @
 endif
@@ -170,10 +172,10 @@ TEST_DIR 	:= $(CURDIR)/test
 
 .PHONY: construct
 construct:
+	$(call ACTION_MSG,TMPL,$(STYLE_BOLD),$(CURDIR))
 	$Qmkdir -p $(INC_DIR)/$(MOD_NAME)/test
 	$Qmkdir -p $(SRC_DIR)
 	$Qmkdir -p $(TEST_DIR)
-	$(call DONE_MSG,module constructed)
 
 help::
 	$(call USAGE_MSG,construct,create expected simple module directory structure)
@@ -211,6 +213,7 @@ CLANGD := $(CURDIR)/.clangd
 # Making this phony to gaurantee generation always.
 .PHONY: $(CLANGD)
 $(CLANGD):
+	$(call GEN_MSG,$@)
 	$Qecho "CompileFlags:" > $@
 	$Qecho "  Compiler: $(COMPILER)" >> $@
 	$Qecho "  Add:" >> $@
@@ -218,11 +221,9 @@ $(CLANGD):
 
 .PHONY: clangd clangd_clean
 clangd: $(CLANGD)
-	$(call DONE_MSG,clangd created)
-
 clangd_clean:
+	$(call CLEAN_MSG,$(CLANGD))
 	$Qrm -f $(CLANGD)
-	$(call DONE_MSG,clangd removed)
 
 help::
 	$(call USAGE_MSG,clangd,create clangd file)
@@ -247,7 +248,8 @@ endif
 
 .PHONY: clean
 clean: 
-	rm -rf $(BUILD_MOD_DIR)
+	$(call CLEAN_MSG,$(BUILD_MOD_DIR))
+	$Qrm -rf $(BUILD_MOD_DIR)
 
 help::
 	$(call USAGE_MSG,clean,delete module build directory)
@@ -256,7 +258,8 @@ DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
 OBJS_DIR 		:= $(BUILD_MOD_DIR)/objs
 
 $(DOTDS_DIR) $(OBJS_DIR):
-	mkdir -p $@
+	$(call GEN_MSG,$@)
+	$Qmkdir -p $@
 
 ### .d files
 
@@ -265,10 +268,12 @@ S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
 C_TEST_DOTDS  	:= $(patsubst %,$(DOTDS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
 
 $(C_DOTDS): $(DOTDS_DIR)/$(C_PREFIX)%.d: $(SRC_DIR)/%.c | $(DOTDS_DIR)
-	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_PREFIX)$*.o" -MF $@
+	$(call GEN_MSG,$@)
+	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_PREFIX)$*.o" -MF $@
 
 $(S_DOTDS): $(DOTDS_DIR)/$(S_PREFIX)%.d: $(SRC_DIR)/%.S | $(DOTDS_DIR)
-	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(S_PREFIX)$*.o" -MF $@
+	$(call GEN_MSG,$@)
+	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(S_PREFIX)$*.o" -MF $@
 
 .PHONY: dotds
 dotds: $(C_DOTDS) $(S_DOTDS)
@@ -284,7 +289,8 @@ include $(C_DOTDS) $(S_DOTDS)
 endif
 
 $(C_TEST_DOTDS): $(DOTDS_DIR)/$(C_TEST_PREFIX)%.d: $(TEST_DIR)/%.c | $(DOTDS_DIR)
-	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_TEST_PREFIX)$*.o" -MF $@
+	$(call GEN_MSG,$@)
+	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_TEST_PREFIX)$*.o" -MF $@
 
 .PHONY: test_dotds
 test_dotds: $(C_TEST_DOTDS)
@@ -306,10 +312,12 @@ S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
 C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
 
 $(C_OBJS): $(OBJS_DIR)/$(C_PREFIX)%.o: | $(OBJS_DIR)
-	$(COMPILER) $(ALL_CFLAGS) -c $(SRC_DIR)/$*.c -o $@
+	$(call COMPILE_MSG,$(SRC_DIR)/$*.c)
+	$Q$(COMPILER) $(ALL_CFLAGS) -c $(SRC_DIR)/$*.c -o $@
 
 $(S_OBJS): $(OBJS_DIR)/$(S_PREFIX)%.o: | $(OBJS_DIR)
-	$(COMPILER) $(ALL_SFLAGS) -c $(SRC_DIR)/$*.S -o $@
+	$(call ASM_MSG,$(SRC_DIR)/$*.S)
+	$Q$(COMPILER) $(ALL_SFLAGS) -c $(SRC_DIR)/$*.S -o $@
 
 .PHONY: objs
 objs: $(C_OBJS) $(S_OBJS)
@@ -319,7 +327,8 @@ help::
 	$(call USAGE_MSG,objs,compile non-test objects)
 
 $(C_TEST_OBJS): $(OBJS_DIR)/$(C_TEST_PREFIX)%.o: | $(OBJS_DIR)
-	$(COMPILER) $(ALL_CFLAGS) -c $(TEST_DIR)/$*.c -o $@
+	$(call COMPILE_MSG,$(TEST_DIR)/$*.c)
+	$Q$(COMPILER) $(ALL_CFLAGS) -c $(TEST_DIR)/$*.c -o $@
 
 .PHONY: test_objs
 test_objs: $(C_TEST_OBJS)
@@ -342,10 +351,12 @@ LIB  	 := $(INSTALL_DIR)/lib$(MOD_NAME).a
 TEST_LIB := $(INSTALL_DIR)/libtest_$(MOD_NAME).a
 
 $(INSTALL_DIR):
-	mkdir -p $@
+	$(call GEN_MSG,$@)
+	$Qmkdir -p $@
 
 $(LIB): $(C_OBJS) $(S_OBJS) | $(INSTALL_DIR)
-	$(ARCHIVER) rcs $@ $^
+	$(call PACKAGE_MSG,$@)
+	$Q$(ARCHIVER) rcs $@ $^
 
 .PHONY: lib
 lib: $(LIB)
@@ -355,7 +366,8 @@ help::
 	$(call USAGE_MSG,lib,package static archive)
 
 $(TEST_LIB): $(C_TEST_OBJS) | $(INSTALL_DIR)
-	$(ARCHIVER) rcs $@ $^
+	$(call PACKAGE_MSG,$@)
+	$Q$(ARCHIVER) rcs $@ $^
 
 .PHONY: test_lib
 test_lib: $(TEST_LIB)
