@@ -335,7 +335,7 @@ test_objs: $(C_TEST_OBJS)
 	@echo > /dev/null
 
 help::
-	$(call USAGE_MSG,test_objs,compile_test_objs)
+	$(call USAGE_MSG,test_objs,compile test objs)
 
 ######################################### Packaging ################################################
 
