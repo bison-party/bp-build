@@ -127,6 +127,9 @@
 # EXTRA_SFLAGS
 #  		Just like EXTRA_CFLAGS, but for compiling the assembly files.
 
+# VERBOSE
+#  		When defined full build commands will be printed.
+
 #################################### Dynamic/Static Inputs #########################################
 
 # NOTE: These are inputs which really don't fall into one of the above categories nicely.
@@ -155,7 +158,9 @@ MOD_NAME := $(notdir $(CURDIR))
 help::
 	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(MOD_NAME)$(STYLE_RESET)"
 
-USAGE_MSG = @printf "  $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%-16.16s$(STYLE_RESET) %s\n" "$1" "$2";
+ifndef VERBOSE
+Q := @
+endif
 
 ################################## Basic Module Organization #######################################
 
@@ -165,9 +170,10 @@ TEST_DIR 	:= $(CURDIR)/test
 
 .PHONY: construct
 construct:
-	mkdir -p $(INC_DIR)/$(MOD_NAME)/test
-	mkdir -p $(SRC_DIR)
-	mkdir -p $(TEST_DIR)
+	$Qmkdir -p $(INC_DIR)/$(MOD_NAME)/test
+	$Qmkdir -p $(SRC_DIR)
+	$Qmkdir -p $(TEST_DIR)
+	$(call DONE_MSG,module constructed)
 
 help::
 	$(call USAGE_MSG,construct,create expected simple module directory structure)
@@ -201,16 +207,22 @@ ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS) $(ALL_INCS_FLAGS)
 ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS) $(ALL_INCS_FLAGS)
 
 CLANGD := $(CURDIR)/.clangd
+
+# Making this phony to gaurantee generation always.
+.PHONY: $(CLANGD)
 $(CLANGD):
-	echo "CompileFlags:" > $@
-	echo "  Compiler: $(COMPILER)" >> $@
-	echo "  Add:" >> $@
-	$(foreach f,$(ALL_CFLAGS),echo "    - $(f)" >> $@;)
+	$Qecho "CompileFlags:" > $@
+	$Qecho "  Compiler: $(COMPILER)" >> $@
+	$Qecho "  Add:" >> $@
+	$Q$(foreach f,$(ALL_CFLAGS),echo "    - $(f)" >> $@;)
 
 .PHONY: clangd clangd_clean
 clangd: $(CLANGD)
+	$(call DONE_MSG,clangd created)
+
 clangd_clean:
-	rm -f $(CLANGD)
+	$Qrm -f $(CLANGD)
+	$(call DONE_MSG,clangd removed)
 
 help::
 	$(call USAGE_MSG,clangd,create clangd file)
@@ -228,7 +240,7 @@ BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
 BUILD_DIR_TARGETS := clean dotds test_dotds objs test_objs lib test_lib
 
 ifneq ($(filter $(BUILD_DIR_TARGETS),$(MAKECMDGOALS)),) 
-ifeq ($(BUILD_DIR),)
+ifndef BUILD_DIR
 $(error BUILD_DIR must be specified for requested target(s))
 endif
 endif
@@ -321,7 +333,7 @@ help::
 # List of targets which require INSTALL_DIR be specified!
 INSTALL_DIR_TARGETS := lib test_lib
 ifneq ($(filter $(INSTALL_DIR_TARGETS),$(MAKECMDGOALS)),) 
-ifeq ($(INSTALL_DIR),)
+ifndef INSTALL_DIR
 $(error INSTALL_DIR must be specified for requested target(s))
 endif
 endif

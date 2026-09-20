@@ -3,7 +3,7 @@
 #
 # If `NOT_TERMINAL` is defined, all console colors are left undefined.
 
-ifeq ($(NOT_TERMINAL),)
+ifndef NOT_TERMINAL
 
 STYLE_ESC := \033
 STYLE_RESET := $(STYLE_ESC)[0m
@@ -54,3 +54,6 @@ STYLE_BG_BRIGHT_CYAN := $(STYLE_ESC)[106m
 STYLE_BG_BRIGHT_WHITE := $(STYLE_ESC)[107m
 
 endif
+
+USAGE_MSG = @printf "  $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%-16.16s$(STYLE_RESET) %s\n" "$1" "$2";
+DONE_MSG  = @echo -e "$(STYLE_BOLD)$(STYLE_BRIGHT_GREEN)$1$(STYLE_RESET)"
