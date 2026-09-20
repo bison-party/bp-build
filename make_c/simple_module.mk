@@ -127,6 +127,9 @@
 # EXTRA_SFLAGS
 #  		Just like EXTRA_CFLAGS, but for compiling the assembly files.
 
+# VERBOSE
+#  		When defined full build commands will be printed.
+
 #################################### Dynamic/Static Inputs #########################################
 
 # NOTE: These are inputs which really don't fall into one of the above categories nicely.
@@ -146,12 +149,22 @@ ARCHIVER ?= ar
 #####                                        TARGETS                                            ####
 ####################################################################################################
 
-# VERY IMPORTANT: ALWAYS invoke phony targets below! NEVER request to build a specific file!
-
-################################## Basic Module Organization #######################################
-
 # Module name is inferred!
 MOD_NAME := $(notdir $(CURDIR))
+
+# VERY IMPORTANT: ALWAYS invoke phony targets below! NEVER request to build a specific file!
+
+.PHONY: help
+help::
+	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(MOD_NAME)$(STYLE_RESET)"
+
+# Some quick stylictic things
+
+ifndef VERBOSE
+Q := @
+endif
+
+################################## Basic Module Organization #######################################
 
 INC_DIR 	:= $(CURDIR)/include
 SRC_DIR		:= $(CURDIR)/src
@@ -159,9 +172,13 @@ TEST_DIR 	:= $(CURDIR)/test
 
 .PHONY: construct
 construct:
-	mkdir -p $(INC_DIR)/$(MOD_NAME)/test
-	mkdir -p $(SRC_DIR)
-	mkdir -p $(TEST_DIR)
+	$(call ACTION_MSG,TMPL,$(STYLE_BOLD),$(CURDIR))
+	$Qmkdir -p $(INC_DIR)/$(MOD_NAME)/test
+	$Qmkdir -p $(SRC_DIR)
+	$Qmkdir -p $(TEST_DIR)
+
+help::
+	$(call USAGE_MSG,construct,create expected simple module directory structure)
 
 C_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.c,$(C_SRC_NAMES))
 S_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.S,$(S_SRC_NAMES))
@@ -183,22 +200,34 @@ ALL_INCS  		:= $(INC_DIR) $(DEPS_INCS) $(INCS)
 includes:
 	@echo "$(ALL_INCS)"
 
+help::
+	$(call USAGE_MSG,includes,get all include directories needed to compile this module)
+
 ALL_INCS_FLAGS 	:= $(addprefix -I,$(ALL_INCS))
 
 ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS) $(ALL_INCS_FLAGS)
 ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS) $(ALL_INCS_FLAGS)
 
 CLANGD := $(CURDIR)/.clangd
+
+# Making this phony to gaurantee generation always.
+.PHONY: $(CLANGD)
 $(CLANGD):
-	echo "CompileFlags:" > $@
-	echo "  Compiler: $(COMPILER)" >> $@
-	echo "  Add:" >> $@
-	$(foreach f,$(ALL_CFLAGS),echo "    - $(f)" >> $@;)
+	$(call GEN_MSG,$@)
+	$Qecho "CompileFlags:" > $@
+	$Qecho "  Compiler: $(COMPILER)" >> $@
+	$Qecho "  Add:" >> $@
+	$Q$(foreach f,$(ALL_CFLAGS),echo "    - $(f)" >> $@;)
 
 .PHONY: clangd clangd_clean
 clangd: $(CLANGD)
 clangd_clean:
-	rm -f $(CLANGD)
+	$(call CLEAN_MSG,$(CLANGD))
+	$Qrm -f $(CLANGD)
+
+help::
+	$(call USAGE_MSG,clangd,create clangd file)
+	$(call USAGE_MSG,clangd_clean,remove clangd file)
 
 ########################################## Compilation #############################################
 
@@ -212,20 +241,25 @@ BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
 BUILD_DIR_TARGETS := clean dotds test_dotds objs test_objs lib test_lib
 
 ifneq ($(filter $(BUILD_DIR_TARGETS),$(MAKECMDGOALS)),) 
-ifeq ($(BUILD_DIR),)
+ifndef BUILD_DIR
 $(error BUILD_DIR must be specified for requested target(s))
 endif
 endif
 
 .PHONY: clean
 clean: 
-	rm -rf $(BUILD_MOD_DIR)
+	$(call CLEAN_MSG,$(BUILD_MOD_DIR))
+	$Qrm -rf $(BUILD_MOD_DIR)
+
+help::
+	$(call USAGE_MSG,clean,delete module build directory)
 
 DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
 OBJS_DIR 		:= $(BUILD_MOD_DIR)/objs
 
 $(DOTDS_DIR) $(OBJS_DIR):
-	mkdir -p $@
+	$(call GEN_MSG,$@)
+	$Qmkdir -p $@
 
 ### .d files
 
@@ -234,14 +268,19 @@ S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
 C_TEST_DOTDS  	:= $(patsubst %,$(DOTDS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
 
 $(C_DOTDS): $(DOTDS_DIR)/$(C_PREFIX)%.d: $(SRC_DIR)/%.c | $(DOTDS_DIR)
-	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_PREFIX)$*.o" -MF $@
+	$(call GEN_MSG,$@)
+	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_PREFIX)$*.o" -MF $@
 
 $(S_DOTDS): $(DOTDS_DIR)/$(S_PREFIX)%.d: $(SRC_DIR)/%.S | $(DOTDS_DIR)
-	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(S_PREFIX)$*.o" -MF $@
+	$(call GEN_MSG,$@)
+	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(S_PREFIX)$*.o" -MF $@
 
 .PHONY: dotds
 dotds: $(C_DOTDS) $(S_DOTDS)
 	@echo > /dev/null
+
+help::
+	$(call USAGE_MSG,dotds,generate .d files for non-test sources)
 
 # List of targets which require C_DOTDS and S_DOTDS be built and included!
 DOTDS_TARGETS := objs lib
@@ -250,11 +289,15 @@ include $(C_DOTDS) $(S_DOTDS)
 endif
 
 $(C_TEST_DOTDS): $(DOTDS_DIR)/$(C_TEST_PREFIX)%.d: $(TEST_DIR)/%.c | $(DOTDS_DIR)
-	$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_TEST_PREFIX)$*.o" -MF $@
+	$(call GEN_MSG,$@)
+	$Q$(COMPILER) $(ALL_INCS_FLAGS) $< -MM -MT "$(OBJS_DIR)/$(C_TEST_PREFIX)$*.o" -MF $@
 
 .PHONY: test_dotds
 test_dotds: $(C_TEST_DOTDS)
 	@echo > /dev/null
+
+help::
+	$(call USAGE_MSG,test_dotds,generate .d files for test sources)
 
 # List of targets which require C_TEST_DOTDS be built and included!
 TEST_DOTDS_TARGETS := test_objs test_lib
@@ -269,28 +312,37 @@ S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
 C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
 
 $(C_OBJS): $(OBJS_DIR)/$(C_PREFIX)%.o: | $(OBJS_DIR)
-	$(COMPILER) $(ALL_CFLAGS) -c $(SRC_DIR)/$*.c -o $@
+	$(call COMPILE_MSG,$(SRC_DIR)/$*.c)
+	$Q$(COMPILER) $(ALL_CFLAGS) -c $(SRC_DIR)/$*.c -o $@
 
 $(S_OBJS): $(OBJS_DIR)/$(S_PREFIX)%.o: | $(OBJS_DIR)
-	$(COMPILER) $(ALL_SFLAGS) -c $(SRC_DIR)/$*.S -o $@
+	$(call ASM_MSG,$(SRC_DIR)/$*.S)
+	$Q$(COMPILER) $(ALL_SFLAGS) -c $(SRC_DIR)/$*.S -o $@
 
 .PHONY: objs
 objs: $(C_OBJS) $(S_OBJS)
 	@echo > /dev/null
 
+help::
+	$(call USAGE_MSG,objs,compile non-test objects)
+
 $(C_TEST_OBJS): $(OBJS_DIR)/$(C_TEST_PREFIX)%.o: | $(OBJS_DIR)
-	$(COMPILER) $(ALL_CFLAGS) -c $(TEST_DIR)/$*.c -o $@
+	$(call COMPILE_MSG,$(TEST_DIR)/$*.c)
+	$Q$(COMPILER) $(ALL_CFLAGS) -c $(TEST_DIR)/$*.c -o $@
 
 .PHONY: test_objs
 test_objs: $(C_TEST_OBJS)
 	@echo > /dev/null
+
+help::
+	$(call USAGE_MSG,test_objs,compile test objs)
 
 ######################################### Packaging ################################################
 
 # List of targets which require INSTALL_DIR be specified!
 INSTALL_DIR_TARGETS := lib test_lib
 ifneq ($(filter $(INSTALL_DIR_TARGETS),$(MAKECMDGOALS)),) 
-ifeq ($(INSTALL_DIR),)
+ifndef INSTALL_DIR
 $(error INSTALL_DIR must be specified for requested target(s))
 endif
 endif
@@ -299,18 +351,27 @@ LIB  	 := $(INSTALL_DIR)/lib$(MOD_NAME).a
 TEST_LIB := $(INSTALL_DIR)/libtest_$(MOD_NAME).a
 
 $(INSTALL_DIR):
-	mkdir -p $@
+	$(call GEN_MSG,$@)
+	$Qmkdir -p $@
 
 $(LIB): $(C_OBJS) $(S_OBJS) | $(INSTALL_DIR)
-	$(ARCHIVER) rcs $@ $^
+	$(call PACKAGE_MSG,$@)
+	$Q$(ARCHIVER) rcs $@ $^
 
 .PHONY: lib
 lib: $(LIB)
 	@echo > /dev/null
 
+help::
+	$(call USAGE_MSG,lib,package static archive)
+
 $(TEST_LIB): $(C_TEST_OBJS) | $(INSTALL_DIR)
-	$(ARCHIVER) rcs $@ $^
+	$(call PACKAGE_MSG,$@)
+	$Q$(ARCHIVER) rcs $@ $^
 
 .PHONY: test_lib
 test_lib: $(TEST_LIB)
 	@echo > /dev/null
+
+help::
+	$(call USAGE_MSG,test_lib,package test static archive)
