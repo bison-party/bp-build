@@ -195,9 +195,9 @@ $(CLANGD):
 	echo "  Add:" >> $@
 	$(foreach f,$(ALL_CFLAGS),echo "    - $(f)" >> $@;)
 
-.PHONY: clangd clangd.clean
+.PHONY: clangd clangd_clean
 clangd: $(CLANGD)
-clangd.clean:
+clangd_clean:
 	rm -f $(CLANGD)
 
 ########################################## Compilation #############################################
