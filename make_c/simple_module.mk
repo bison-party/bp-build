@@ -73,7 +73,13 @@ C_TEST_PREFIX 	:= c_test_
 # The idea here is to make a distinction between when should be specified when invoking the 
 # including Makefile, and what is actually just declared in the including Makefile.
 
+# NOTE: In the "Inputs" sections below I organize definitions in a way I find intuitive.
+# The comments are what define the actual expected inputs.
+# For example, `INC_DIR` below is not an input, but `C_SRC_NAMES` is!
+
 ######################################## Static Inputs #############################################
+
+INC_DIR := $(CURDIR)/include
 
 # C_SRC_NAMES
 #  		Names of all `.c` source files that should be compiled from $(MOD_NAME)/src.
@@ -96,6 +102,14 @@ SRC_DIR 	:= $(CURDIR)/src
 C_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.c,$(C_SRC_NAMES))
 S_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.S,$(S_SRC_NAMES))
 
+# DESIGN NOTE:
+# There have been build tools I've designed which allow for specifying headers individually.
+# The idea being that configuration files could conditionally select which headers
+# to specify in the including Makefile.
+# In the design here though, I have decided against going down this path.
+# Header files are never copied out of their original include directories and modules always
+# give access to ALL headers in their include directory.
+
 ifeq ($(C_TEST_SRC_NAMES),)
 $(error At least 1 `.c` test source file must be specified)
 endif
@@ -117,6 +131,10 @@ C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 # NOTE: The full list of include directories derived from DEPS and INCS is given when compiling
 # ALL source files! (`.c`, `.S`, and test `.c` files)
 
+DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) includes))
+ALL_INCS  		:= $(INC_DIR) $(DEPS_INCS) $(INCS)
+ALL_INCS_FLAGS 	:= $(addprefix -I,$(ALL_INCS))
+
 # CFLAGS
 #  		A list of C compile flags to be specified when compiling `.c` files and test `.c` files.
 #  		While you could technically add -I flags here, it is recommended you instead use INCS 
@@ -125,14 +143,14 @@ C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 # SFLAGS
 #  		A list of S compile flags to be specified when compiling `.S` files.
 
-
 ####################################### Dynamic Inputs #############################################
 
-# BUILD_DIR - See build directory structure above!
+# BUILD_DIR 
+#  		See build directory structure above!
 
-ifeq ($(BUILD_DIR),)
-$(error Build directory not specified)
-endif
+#ifeq ($(BUILD_DIR),)
+#$(error Build directory not specified)
+#endif
 
 BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
 
@@ -152,7 +170,6 @@ C_TEST_DOTDS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAME
 #
 # EXTRA_SFLAGS
 #  		Just like EXTRA_CFLAGS, but for compiling the assembly files.
-#
 
 #################################### Dynamic/Static Inputs #########################################
 
@@ -171,3 +188,24 @@ ARCHIVER ?= ar
 
 ####################################################################################################
 
+.PHONY: construct
+construct:
+	mkdir -p $(INC_DIR)/$(MOD_NAME)/test
+	mkdir -p $(SRC_DIR)
+	mkdir -p $(TEST_DIR)
+
+ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS) $(ALL_INCS_FLAGS)
+ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS) $(ALL_INCS_FLAGS)
+
+CLANGD := $(CURDIR)/.clangd
+
+$(CLANGD):
+	echo "CompileFlags:" > $@
+	echo "  Compiler: $(COMPILER)" >> $@
+	echo "  Add:" >> $@
+	$(foreach f,$(ALL_CFLAGS),echo "    - $(f)" >> $@;)
+
+.PHONY: clangd clangd.clean
+clangd: $(CLANGD)
+clangd.clean:
+	rm -f $(CLANGD)
