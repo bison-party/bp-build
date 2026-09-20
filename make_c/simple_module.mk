@@ -43,13 +43,6 @@
 #     lib$(MOD_NAME).a
 #     libtest_$(MOD_NAME).a
 
-# Module name is inferred!
-MOD_NAME := $(notdir $(CURDIR))
-
-C_PREFIX 		:= c_
-S_PREFIX 		:= S_
-C_TEST_PREFIX 	:= c_test_
-
 ####################################################################################################
 #####                                         INPUTS                                            ####
 ####################################################################################################
@@ -79,8 +72,6 @@ C_TEST_PREFIX 	:= c_test_
 
 ######################################## Static Inputs #############################################
 
-INC_DIR := $(CURDIR)/include
-
 # C_SRC_NAMES
 #  		Names of all `.c` source files that should be compiled from $(MOD_NAME)/src.
 #
@@ -94,14 +85,6 @@ INC_DIR := $(CURDIR)/include
 # It is understood that S_SRC_NAMES := my_src refers to $(MOD_NAME)/src/my_src.S.
 # Extensions are inferred!
 
-ifeq ($(C_SRC_NAMES)$(S_SRC_NAMES),)
-$(error At least 1 `.c` or `.S` source file must be specified)
-endif
-
-SRC_DIR 	:= $(CURDIR)/src
-C_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.c,$(C_SRC_NAMES))
-S_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.S,$(S_SRC_NAMES))
-
 # DESIGN NOTE:
 # There have been build tools I've designed which allow for specifying headers individually.
 # The idea being that configuration files could conditionally select which headers
@@ -109,13 +92,6 @@ S_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.S,$(S_SRC_NAMES))
 # In the design here though, I have decided against going down this path.
 # Header files are never copied out of their original include directories and modules always
 # give access to ALL headers in their include directory.
-
-ifeq ($(C_TEST_SRC_NAMES),)
-$(error At least 1 `.c` test source file must be specified)
-endif
-
-TEST_DIR 	:= $(CURDIR)/test
-C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 
 # DEPS
 #  		A list of absolute paths to other modules which this module depends on.
@@ -131,10 +107,6 @@ C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 # NOTE: The full list of include directories derived from DEPS and INCS is given when compiling
 # ALL source files! (`.c`, `.S`, and test `.c` files)
 
-DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) includes))
-ALL_INCS  		:= $(INC_DIR) $(DEPS_INCS) $(INCS)
-ALL_INCS_FLAGS 	:= $(addprefix -I,$(ALL_INCS))
-
 # CFLAGS
 #  		A list of C compile flags to be specified when compiling `.c` files and test `.c` files.
 #  		While you could technically add -I flags here, it is recommended you instead use INCS 
@@ -147,22 +119,6 @@ ALL_INCS_FLAGS 	:= $(addprefix -I,$(ALL_INCS))
 
 # BUILD_DIR 
 #  		See build directory structure above!
-
-#ifeq ($(BUILD_DIR),)
-#$(error Build directory not specified)
-#endif
-
-BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
-
-OBJS_DIR 		:= $(BUILD_MOD_DIR)/objs
-C_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(C_PREFIX)%.o,$(C_SRC_NAMES))
-S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
-C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
-
-DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
-C_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(C_PREFIX)%.d,$(C_SRC_NAMES))
-S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
-C_TEST_DOTDS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
 
 # EXTRA_CFLAGS
 #  		If for some reason you want to add more flags when building, use this instead of 
@@ -187,6 +143,18 @@ ARCHIVER ?= ar
 # NOTE: I don't use the builtins AR or CC here because I don't like how those are always defined.
 
 ####################################################################################################
+#####                                        TARGETS                                            ####
+####################################################################################################
+
+
+################################## Basic Module Organization #######################################
+
+# Module name is inferred!
+MOD_NAME := $(notdir $(CURDIR))
+
+INC_DIR 	:= $(CURDIR)/include
+SRC_DIR		:= $(CURDIR)/src
+TEST_DIR 	:= $(CURDIR)/test
 
 .PHONY: construct
 construct:
@@ -194,11 +162,25 @@ construct:
 	mkdir -p $(SRC_DIR)
 	mkdir -p $(TEST_DIR)
 
+C_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.c,$(C_SRC_NAMES))
+S_SRCS  	:= $(patsubst %,$(SRC_DIR)/%.S,$(S_SRC_NAMES))
+C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
+
+######################################## Flag Resolution ###########################################
+
+DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) includes))
+ALL_INCS  		:= $(INC_DIR) $(DEPS_INCS) $(INCS)
+
+.PHONY: includes
+includes:
+	@echo "$(ALL_INCS)"
+
+ALL_INCS_FLAGS 	:= $(addprefix -I,$(ALL_INCS))
+
 ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS) $(ALL_INCS_FLAGS)
 ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS) $(ALL_INCS_FLAGS)
 
 CLANGD := $(CURDIR)/.clangd
-
 $(CLANGD):
 	echo "CompileFlags:" > $@
 	echo "  Compiler: $(COMPILER)" >> $@
@@ -209,3 +191,24 @@ $(CLANGD):
 clangd: $(CLANGD)
 clangd.clean:
 	rm -f $(CLANGD)
+
+########################################## Compilation #############################################
+
+C_PREFIX 		:= c_
+S_PREFIX 		:= S_
+C_TEST_PREFIX 	:= c_test_
+
+BUILD_MOD_DIR 	:= $(BUILD_DIR)/$(MOD_NAME)
+
+OBJS_DIR 		:= $(BUILD_MOD_DIR)/objs
+C_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(C_PREFIX)%.o,$(C_SRC_NAMES))
+S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
+C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
+
+DOTDS_DIR 		:= $(BUILD_MOD_DIR)/dotds
+C_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(C_PREFIX)%.d,$(C_SRC_NAMES))
+S_DOTDS 		:= $(patsubst %,$(DOTDS_DIR)/$(S_PREFIX)%.d,$(S_SRC_NAMES))
+C_TEST_DOTDS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.d,$(C_TEST_SRC_NAMES))
+
+
+
