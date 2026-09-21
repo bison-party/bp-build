@@ -1,7 +1,7 @@
 
 #include <stdbool.h>
 
-#include "simple_module1/logic.h"
+#include "module1/logic.h"
 
 int test_logic(void) {
     int asm_res = do_asm_logic();

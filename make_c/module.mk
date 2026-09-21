@@ -156,6 +156,9 @@
 #
 # INSTALL_DIR 
 #  		See install directory structure above!
+#
+# NOTE: Be careful when providing these! Remember that relative paths will always be relative to
+# the including Makefile's CURDIR!
 
 # EXTRA_CFLAGS
 #  		If for some reason you want to add more flags when building, use this instead of 
