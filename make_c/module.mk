@@ -12,7 +12,7 @@
 # "Static Inputs" in the including Makefile. (See the INPUTS section below)
 # 2) Before `include path/to/module.mk`, the module writer must `include path/to/colors.mk`.
 # This is a helper makefile found at the top level of the `bp-build` repo. It declares macros
-# which are used for pretty printing. 
+# which are used for pretty printing.
 # 3) The including Makefile must live in a directory with structure outlined in the 
 # "Required Directory Structure" section below.
 #
@@ -167,9 +167,6 @@
 # EXTRA_SFLAGS
 #  		Just like EXTRA_CFLAGS, but for compiling the assembly files.
 
-# VERBOSE
-#  		When defined full build commands will be printed.
-
 #################################### Dynamic/Static Inputs #########################################
 
 # NOTE: These are inputs which really don't fall into one of the above categories nicely.
@@ -197,10 +194,6 @@ MOD_NAME := $(notdir $(CURDIR))
 .PHONY: help
 help::
 	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(MOD_NAME)$(STYLE_RESET)"
-
-ifndef VERBOSE
-Q := @
-endif
 
 ################################## Basic Module Organization #######################################
 

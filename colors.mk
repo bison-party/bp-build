@@ -1,10 +1,31 @@
-# This is a helper Makefile which is meant to be included.
-# It provides escape codes for different console colors!
+####################################################################################################
+#####                                     EXPECTED USAGE                                        ####
+####################################################################################################
+
+# colors.mk is not very restrictive in its usage. It's intended to be included in a Makefile
+# early on. Thus, allowing for later defined targets to use helper macros below!
+
+####################################################################################################
+#####                                         INPUTS                                            ####
+####################################################################################################
+
+# NOT_TERMINAL
+#  		When outputing to a file, ANSI terminal commands should not be printed.
+#  		When NOT_TERMINAL is defined, all ANSI macros below are left undefined!
 #
-# If `NOT_TERMINAL` is defined, all console colors are left undefined.
+# VERBOSE
+#  		When left undefined, the macro Q is set to @. It is intended that the including Makefile
+#  		prefixes lengthy commands with $Q. Thus, such commands are only echo'd when VERBOSE
+#  		is defined!
+
+# There is no preference for how inputs should be provided. (Unlike Dynamic/Static inputs outlined
+# in `make_c/module.mk`)
+
+####################################################################################################
+#####                                    DECLARATIONS                                           ####
+####################################################################################################
 
 ifndef NOT_TERMINAL
-
 STYLE_ESC := \033
 STYLE_RESET := $(STYLE_ESC)[0m
 
@@ -52,7 +73,10 @@ STYLE_BG_BRIGHT_BLUE := $(STYLE_ESC)[104m
 STYLE_BG_BRIGHT_MAGENTA := $(STYLE_ESC)[105m
 STYLE_BG_BRIGHT_CYAN := $(STYLE_ESC)[106m
 STYLE_BG_BRIGHT_WHITE := $(STYLE_ESC)[107m
+endif
 
+ifndef VERBOSE
+Q := @
 endif
 
 USAGE_MSG = @printf "  $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%-16.16s$(STYLE_RESET) %s\n" "$1" "$2";
