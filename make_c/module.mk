@@ -225,7 +225,8 @@ ifneq ($(filter $(DEPS_RES_TARGETS),$(MAKECMDGOALS)),)
 DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) includes))
 endif
 
-ALL_INCS  		:= $(INC_DIR) $(DEPS_INCS) $(INCS)
+# Sort will take out repeats!
+ALL_INCS  		:= $(sort $(INC_DIR) $(DEPS_INCS) $(INCS))
 
 .PHONY: includes
 includes:
