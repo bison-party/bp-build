@@ -58,8 +58,7 @@
 # * When sources are compiled, their names are mangled to prevent collision of object files. 
 # A `src/file.c`, `src/file.S`, and `test/file.c` can all be declared within a single module without
 # any issues!
-#
-#
+
 ####################################################################################################
 #####                                 PRIMARY BUILD OUTPUTS                                     ####
 ####################################################################################################
@@ -70,7 +69,7 @@
 # BUILD_DIR Generated Structure:
 #
 # $(BUILD_DIR)/
-#   $(MOD_NAME)/
+#  	$(MOD_NAME)/
 #     dotds/
 #       *.d
 #     objs/ 
