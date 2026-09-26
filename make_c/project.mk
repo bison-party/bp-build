@@ -130,7 +130,7 @@ MOD_MAKE := $(MAKE) --no-print-directory \
 			COMPILER=$(COMPILER) \
 			ARCHIVER=$(ARCHIVER)
 
-ifndef MODULES
+ifndef MODS
 $(error projects require at least one module be given)
 endif
 
@@ -142,42 +142,24 @@ ifneq ($(words $(MOD_NAMES)),$(words $(sort $(MOD_NAMES))))
 $(error project module names must be unique)
 endif
 
-# Cool hack I learned for constructing a map in make!
-# We need a way to map a module's name to its absolute path.
-# This foreach which define MOD_MAP_<module name> to <module path> for all modules.
-# Realize that this only works because module names are gauranteed to be unique!
-$(foreach mod_path,$(MODS),$(eval MOD_MAP_$(notdir $(mod_path)) := $(mod_path)))
+PROJECT_PREFIX := p
 
-PROJECT_PREFIX := p.
-
-# Alright so where do we go from here.
-
-# The problem is the base name type of thing tbh...
-
-# p.<target>.<module> => forward just to one module.
-# p.<target> => forward to all modules!
-
-# I feel like there should be a way to forward anything we want to module targets right?
-# Maybe lib
-# There needs to be somesort of prefix I think... p.
-
-
-# This is necessary as module paths cannot be deduced from the basenames alone!
+# This is a helper for defining a "forwarding target" for a specific module.
+# A "forwarding target" invokes the module's Makefile with whatever target is provided
+# in the placeholder.
 #
-# $(eval $(call MOD_FORWARD_TARGET,<targ>,<path>))
-# Would define target <targ>.<mod_name> which would essentially just resolve to 
-# $(MAKE) -C <path> <targ>. (This omits the dynamic inputs which would be passed to the module)
+# The defined target is PHONY, however, you cannot place % into a PHONY declaration for 
+# some reason. So the forwarding target for module <mod> will also define and depend on 
+# phony target $(PROJECT_PREFIX)_phony.mod
 #
-# $1 - Forwarding target name.
-# $2 - Absolute module path.
-define MOD_FORWARD_TARGET
-lib.$(notdir $1)
-endef
+# $1 - Module absolute path.
+define MOD_FORWARD_TARGET 
+.PHONY: $(PROJECT_PREFIX)_phony.$(notdir $(1))
+$(PROJECT_PREFIX).%.$(notdir $(1)): $(PROJECT_PREFIX)_phony.$(notdir $(1))
+	$Q$(MOD_MAKE) -C $(1) $$*
+endef 
 
-.PHONY: libs test_libs
-libs:
-	# How about just lib and test lib... that wouldn't be so bad right?
-	# It would be nice to have sort of echo statemnt right?
-	# Hmmm, Idk if foreach works that way tbh...
-	echo > /dev/null
+$(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGET,$(mod_path))))
 
+
+$(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(PROJECT_PREFIX).%.$(mod))
