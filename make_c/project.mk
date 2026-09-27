@@ -199,6 +199,7 @@ define MOD_FORWARD_TARGETS_MACRO
 MOD_FORWARD_TARGETS_$(notdir $(1)) := $(foreach mft,$(MOD_FORWARD_TARGETS),$(PROJECT_PREFIX).$(mft).$(notdir $(1)))
 .PHONY: $$(MOD_FORWARD_TARGETS_$(notdir $(1)))
 $$(MOD_FORWARD_TARGETS_$(notdir $(1))): $(PROJECT_PREFIX).%.$(notdir $(1)):
+	$(call ENTRANCE_MSG,$(notdir $(1)),$$*)
 	$Q$(MOD_MAKE) -C $(1) $$*
 endef 
 
