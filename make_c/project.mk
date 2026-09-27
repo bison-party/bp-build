@@ -174,7 +174,9 @@ endef
 
 $(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGETS_MACRO,$(mod_path))))
 
-
+FULL_ALL_FORWARD_TARGETS := $(addprefix $(PROJECT_PREFIX).,$(MOD_FORWARD_TARGETS))
+.PHONY: $(FULL_ALL_FORWARD_TARGETS)
+$(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MODS),$(PROJECT_PREFIX).%.$(notdir $(mod)))
 
 help::
 	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>.<mod>,invoke target <targ> on module <mod>)
