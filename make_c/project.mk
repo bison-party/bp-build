@@ -55,6 +55,34 @@
 #  	  libtest_<modN>.a
 #  	
 
+################################# EXPORTED SYMBOLS AND TARGETS #####################################
+
+# As `project.mk` doesn't really product a single binary, it is the responsibilty of the includer
+# to package everything together however they see fit.
+#
+# To do this, `project.mk` defines some targets and symbols which are meant to be used later on in
+# the including Makefile!
+#
+# Exported Symbols:
+#
+# MOD_NAMES
+#  	 	Names of all modules. 	
+#
+# PROJECT_PREFIX
+#  		To prevent collision with targets in the including Makefile, all targets (except for `help`)
+#  		being with `$(PROJECT_PREFIX).`. 
+#
+# Exported Targets:
+#
+# $(PROJECT_PREFIX).lib
+#  		Generate all module library files. (See $(BUILD_DIR)/install explained above)
+#
+# $(PROJECT_PREFIX).test_lib
+#  		Generate all module test library files.
+#
+# NOTE: Nothing is stopping you from using anything defined in this file really. The targets
+# and symbols listed here are just the most important.
+
 ####################################################################################################
 #####                                         INPUTS                                            ####
 ####################################################################################################
@@ -195,8 +223,8 @@ help::
 	@echo -e "  If unsure what a value of <targ> does, invoke $(PROJECT_PREFIX).help.<mod>"
 	@echo -e "  for any valid value of <mod>. This will display module make targets."
 
-.PHONY: clean
-clean:
+.PHONY: $(PROJECT_PREFIX).clean
+$(PROJECT_PREFIX).clean:
 	$(call CLEAN_MSG,$(BUILD_DIR))
 	$Qrm -rf $(BUILD_DIR)
 
