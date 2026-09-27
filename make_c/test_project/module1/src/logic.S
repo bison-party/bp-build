@@ -1,7 +1,9 @@
+#include "other.h"
+
     .text
 
-.globl do_asm_logic
-do_asm_logic:
-    mov $5, %eax
+.globl get_thing
+get_thing:
+    mov $THING, %eax
     ret
 

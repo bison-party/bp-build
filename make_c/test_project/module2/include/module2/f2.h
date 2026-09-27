@@ -1,3 +1,3 @@
 #pragma once
 
-int f2(void);
+int thing_plus_2(void);

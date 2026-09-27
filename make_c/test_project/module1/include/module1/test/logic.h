@@ -1,3 +1,3 @@
 #pragma once
 
-int test_logic(void);
+int run_mod1_test(void);

@@ -1,6 +1,6 @@
 
 #include "module2/f1.h"
 
-int f2(void) {
-    return f1() + 1;
+int thing_plus_2(void) {
+    return thing_plus_1() + 1;
 }
