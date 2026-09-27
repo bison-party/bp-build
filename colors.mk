@@ -85,10 +85,26 @@ USAGE_MSG = @printf "  $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%-16.16s$(STYLE_RESET)
 
 GET_TIME = $(shell date '+%H:%M:%S')
 
+DATE_FMT := $(STYLE_BOLD)$(STYLE_BRIGHT_BLACK)%s$(STYLE_RESET)
+
+# Who knew you needed 4 dollar signs to double escape... smh.
+# This first calculates the length of the right algined entrance message without ansi codes.
+# Then uses that length for padding when actually printing to the console!
+#
+# $1 - Name of module
+# $2 - Name of target
+ENTRANCE_MSG = @plain_msg=" Entering module $1 for target $2 "; plain_msg_len=$$$${\#plain_msg}; \
+			   printf "%*.s" "$$$$(( $(shell tput cols) - $$$${plain_msg_len} ))" "" | tr " " "_"; \
+			   printf " Entering module $(STYLE_BOLD)%s$(STYLE_RESET) for target $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%s$(STYLE_RESET) \n" \
+			   "$1" "$2"
+
+HLINE = "$(shell printf "%*.s" "$(shell tput cols)" "" | tr " " "_")"
+
+# Could we do some sort of horizontal ending line?
 # $1 - Name of Action
 # $2 - Style of Action
 # $3 - Action description
-ACTION_MSG = @printf "$(STYLE_BOLD)$(STYLE_BRIGHT_BLACK)%s$(STYLE_RESET)  $2%-10.10s$(STYLE_RESET) $(STYLE_ITALIC)%s$(STYLE_RESET)\n" \
+ACTION_MSG = @printf "$(DATE_FMT) $2%-10.10s$(STYLE_RESET) $(STYLE_ITALIC)%s$(STYLE_RESET)\n" \
 			 "$(GET_TIME)" "$1" "$3"
 
 # Different action types which may be helpful!

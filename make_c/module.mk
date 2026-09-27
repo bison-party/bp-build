@@ -193,6 +193,7 @@ MOD_NAME := $(notdir $(CURDIR))
 .PHONY: help
 help::
 	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(MOD_NAME)$(STYLE_RESET)"
+	$(call USAGE_MSG,help,display this message)
 
 ################################## Basic Module Organization #######################################
 

@@ -55,6 +55,34 @@
 #  	  libtest_<modN>.a
 #  	
 
+################################# EXPORTED SYMBOLS AND TARGETS #####################################
+
+# As `project.mk` doesn't really product a single binary, it is the responsibilty of the includer
+# to package everything together however they see fit.
+#
+# To do this, `project.mk` defines some targets and symbols which are meant to be used later on in
+# the including Makefile!
+#
+# Exported Symbols:
+#
+# MOD_NAMES
+#  	 	Names of all modules. 	
+#
+# PROJECT_PREFIX
+#  		To prevent collision with targets in the including Makefile, all targets (except for `help`)
+#  		being with `$(PROJECT_PREFIX).`. 
+#
+# Exported Targets:
+#
+# $(PROJECT_PREFIX).lib
+#  		Generate all module library files. (See $(BUILD_DIR)/install explained above)
+#
+# $(PROJECT_PREFIX).test_lib
+#  		Generate all module test library files.
+#
+# NOTE: Nothing is stopping you from using anything defined in this file really. The targets
+# and symbols listed here are just the most important.
+
 ####################################################################################################
 #####                                         INPUTS                                            ####
 ####################################################################################################
@@ -114,6 +142,7 @@ PROJECT_NAME := $(notdir $(CURDIR))
 .PHONY: help
 help::
 	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(PROJECT_NAME)$(STYLE_RESET)"
+	$(call USAGE_MSG,help,display this message)
 
 MODS_BUILD_DIR := $(BUILD_DIR)/mods
 MODS_INSTALL_DIR := $(BUILD_DIR)/install
@@ -142,36 +171,67 @@ ifneq ($(words $(MOD_NAMES)),$(words $(sort $(MOD_NAMES))))
 $(error project module names must be unique)
 endif
 
+# Creative way to make a "kinda" static map in Make!
+# $(foreach mod_path,$(MODS),$(eval MOD_PATH_MAP_$(notdir $(mod_path)) := $(mod_path)))
+
 PROJECT_PREFIX := p
 
-# This is a helper for defining a "forwarding target" for a specific module.
-# A "forwarding target" invokes the module's Makefile with whatever target is provided
-# in the placeholder.
+# DESIGN NOTE: I used to have an abstract target forwarding scheme using pattern matching rules.
+# This actually turned out to be quite confusing. How Make interprets non-explict patterned
+# targets is very weird. Especially if those targets are intended to be PHONY.
 #
-# The defined target is PHONY, however, you cannot place % into a PHONY declaration for 
-# some reason. So the forwarding target for module <mod> will also define and depend on 
-# phony target $(PROJECT_PREFIX)_phony.mod
+# Anyway, now there is a preset list of targets which can be forwarded to modules.
+MOD_FORWARD_TARGETS := \
+			   help \
+			   clangd \
+			   clangd_clean \
+			   lib \
+			   test_lib
+
+# NOTE: That in previous projects of mine I have always avoided dynamic make.
+# In this situation though where we are mapping module names to their absolute paths, it is kinda
+# required! Given just the name of a module, it is impossible to deduce its absolute path.
+# This macro will pair them together by having access to the module absolute path when creating
+# its rules!
 #
-# $1 - Module absolute path.
-define MOD_FORWARD_TARGET 
-.PHONY: $(PROJECT_PREFIX)_phony.$(notdir $(1))
-$(PROJECT_PREFIX).%.$(notdir $(1)): $(PROJECT_PREFIX)_phony.$(notdir $(1))
+# $1 - Absolute module path
+define MOD_FORWARD_TARGETS_MACRO
+MOD_FORWARD_TARGETS_$(notdir $(1)) := $(foreach mft,$(MOD_FORWARD_TARGETS),$(PROJECT_PREFIX).$(mft).$(notdir $(1)))
+.PHONY: $$(MOD_FORWARD_TARGETS_$(notdir $(1)))
+$$(MOD_FORWARD_TARGETS_$(notdir $(1))): $(PROJECT_PREFIX).%.$(notdir $(1)):
+	$(call ENTRANCE_MSG,$(notdir $(1)),$$*)
 	$Q$(MOD_MAKE) -C $(1) $$*
 endef 
 
-$(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGET,$(mod_path))))
+$(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGETS_MACRO,$(mod_path))))
+
+FULL_ALL_FORWARD_TARGETS := $(addprefix $(PROJECT_PREFIX).,$(MOD_FORWARD_TARGETS))
+.PHONY: $(FULL_ALL_FORWARD_TARGETS)
+$(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(PROJECT_PREFIX).%.$(mod))
 
 help::
+	@echo -e ""
+	@echo -e "  $(STYLE_BOLD)module target forwarding$(STYLE_RESET)"
+	@echo -e "  project.mk allows certain targets to be invoked on modules directly from this"
+	@echo -e "  directory. To do so, use the following patterns."
+	@echo -e ""
 	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>.<mod>,invoke target <targ> on module <mod>)
-
-$(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(PROJECT_PREFIX).%.$(mod))
-	@# I think pattern rules are never considered phony, thus they must always
-	@# have a recipe!
-	@echo > /dev/null 
-
-help::
 	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>,invoke target <targ> on all modules)
+	@echo -e ""
+	@echo -e "  <targ> \in $(STYLE_BOLD)$(MOD_FORWARD_TARGETS)$(STYLE_RESET)"
+	@echo -e "  <mod>  \in $(STYLE_BOLD)$(MOD_NAMES)$(STYLE_RESET)"
+	@echo -e ""
+	@echo -e "  If unsure what a value of <targ> does, invoke $(PROJECT_PREFIX).help.<mod>"
+	@echo -e "  for any valid value of <mod>. This will display module make targets."
+
+.PHONY: $(PROJECT_PREFIX).clean
+$(PROJECT_PREFIX).clean:
+	$(call CLEAN_MSG,$(BUILD_DIR))
+	$Qrm -rf $(BUILD_DIR)
 
 help::
-	@echo -e "  modules: $(STYLE_BOLD)$(MOD_NAMES)$(STYLE_RESET)"
+	@echo -e ""
+	$(call USAGE_MSG,clean,delete build directory)
+
+
 
