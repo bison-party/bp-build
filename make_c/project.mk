@@ -72,6 +72,15 @@
 #  		To prevent collision with targets in the including Makefile, all targets (except for `help`)
 #  		being with `$(PROJECT_PREFIX).`. 
 #
+# MOD_LIBS
+#  		This is a list of all non-test static libraries.
+#  		NOTE: These have a declared target too! The intention is for the includer to use $(MOD_LIBS)
+#  		as a prerequisite in the including Makefile.
+#
+# MOD_TEST_LIBS
+#  		This is a list of test static libraries.
+#  		These also have a declared target like $(MOD_LIBS).
+#
 # Exported Targets:
 #
 # $(PROJECT_PREFIX).lib
@@ -171,9 +180,6 @@ ifneq ($(words $(MOD_NAMES)),$(words $(sort $(MOD_NAMES))))
 $(error project module names must be unique)
 endif
 
-# Creative way to make a "kinda" static map in Make!
-# $(foreach mod_path,$(MODS),$(eval MOD_PATH_MAP_$(notdir $(mod_path)) := $(mod_path)))
-
 PROJECT_PREFIX := p
 
 # DESIGN NOTE: I used to have an abstract target forwarding scheme using pattern matching rules.
@@ -208,6 +214,22 @@ $(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGETS_MACRO,$(mod_path)))
 FULL_ALL_FORWARD_TARGETS := $(addprefix $(PROJECT_PREFIX).,$(MOD_FORWARD_TARGETS))
 .PHONY: $(FULL_ALL_FORWARD_TARGETS)
 $(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(PROJECT_PREFIX).%.$(mod))
+
+# NOTE: The forward targets above are great when physically typing out a make command into the
+# terminal. However, when including this Makefile, you may want a target to depend on the
+# built module libraries. The below two target declarations tell Make that the forwarding targets
+# lib.<mod_name> test_lib.<mod_name> are special, and are known to generate static library files!
+#
+# If a target in the including Makefile requires the library files, its prerequisites can list
+# $(MOD_LIBS) and/or $(MOD_TEST_LIBS) instead of the phony targets defined above!
+#
+# This is really just a trick to prevent unnecessary rebuilding of say a binary!
+
+MOD_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/lib$(mod).a)
+$(MOD_LIBS): $(MODS_INSTALL_DIR)/lib%.a: $(PROJECT_PREFIX).lib.%
+
+MOD_TEST_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/libtest_$(mod).a)
+$(MOD_TEST_LIBS): $(MODS_INSTALL_DIR)/libtest_%.a: $(PROJECT_PREFIX).test_lib.%
 
 help::
 	@echo -e ""
