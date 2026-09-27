@@ -114,6 +114,7 @@ PROJECT_NAME := $(notdir $(CURDIR))
 .PHONY: help
 help::
 	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(PROJECT_NAME)$(STYLE_RESET)"
+	$(call USAGE_MSG,help,display this message)
 
 MODS_BUILD_DIR := $(BUILD_DIR)/mods
 MODS_INSTALL_DIR := $(BUILD_DIR)/install
@@ -142,32 +143,42 @@ ifneq ($(words $(MOD_NAMES)),$(words $(sort $(MOD_NAMES))))
 $(error project module names must be unique)
 endif
 
+# Creative way to make a "kinda" static map in Make!
+# $(foreach mod_path,$(MODS),$(eval MOD_PATH_MAP_$(notdir $(mod_path)) := $(mod_path)))
+
 PROJECT_PREFIX := p
 
-# This is a helper for defining a "forwarding target" for a specific module.
-# A "forwarding target" invokes the module's Makefile with whatever target is provided
-# in the placeholder.
+# DESIGN NOTE: I used to have an abstract target forwarding scheme using pattern matching rules.
+# This actually turned out to be quite confusing. How Make interprets non-explict patterned
+# targets is very weird. Especially if those targets are intended to be PHONY.
 #
-# The defined target is PHONY, however, you cannot place % into a PHONY declaration for 
-# some reason. So the forwarding target for module <mod> will also define and depend on 
-# phony target $(PROJECT_PREFIX)_phony.mod
+# Anyway, now there is a preset list of target which can be forwarded to modules.
+MOD_FORWARD_TARGETS := \
+			   clangd \
+			   lib \
+			   test_lib
+
+# NOTE: That in previous projects of mine I have always avoided dynamic make.
+# In this situation though where we are mapping module names to their absolute paths, it is kinda
+# required! Given just the name of a module, it is impossible to deduce its absolute path.
+# This macro will pair them together by having access to the module absolute path when creating
+# its rules!
 #
-# $1 - Module absolute path.
-define MOD_FORWARD_TARGET 
-.PHONY: $(PROJECT_PREFIX)_phony.$(notdir $(1))
-$(PROJECT_PREFIX).%.$(notdir $(1)): $(PROJECT_PREFIX)_phony.$(notdir $(1))
+# $1 - Absolute module path
+define MOD_FORWARD_TARGETS_MACRO
+MOD_FORWARD_TARGETS_$(notdir $(1)) := $(foreach mft,$(MOD_FORWARD_TARGETS),$(PROJECT_PREFIX).$(mft).$(notdir $(1)))
+.PHONY: $$(MOD_FORWARD_TARGETS_$(notdir $(1)))
+$$(MOD_FORWARD_TARGETS_$(notdir $(1))): $(PROJECT_PREFIX).%.$(notdir $(1)):
 	$Q$(MOD_MAKE) -C $(1) $$*
 endef 
 
-$(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGET,$(mod_path))))
+$(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGETS_MACRO,$(mod_path))))
+
+
 
 help::
 	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>.<mod>,invoke target <targ> on module <mod>)
 
-$(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(PROJECT_PREFIX).%.$(mod))
-	@# I think pattern rules are never considered phony, thus they must always
-	@# have a recipe!
-	@echo > /dev/null 
 
 help::
 	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>,invoke target <targ> on all modules)
