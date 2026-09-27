@@ -161,10 +161,17 @@ endef
 
 $(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGET,$(mod_path))))
 
+help::
+	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>.<mod>,invoke target <targ> on module <mod>)
+
 $(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(PROJECT_PREFIX).%.$(mod))
 	@# I think pattern rules are never considered phony, thus they must always
 	@# have a recipe!
 	@echo > /dev/null 
 
-.PHONY: r
-r: $(PROJECT_PREFIX).objs
+help::
+	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>,invoke target <targ> on all modules)
+
+help::
+	@echo -e "  modules: $(STYLE_BOLD)$(MOD_NAMES)$(STYLE_RESET)"
+

@@ -79,6 +79,8 @@ ifndef VERBOSE
 Q := @
 endif
 
+# $1 - Name of target
+# $2 - Description
 USAGE_MSG = @printf "  $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%-16.16s$(STYLE_RESET) %s\n" "$1" "$2";
 
 GET_TIME = $(shell date '+%H:%M:%S')
