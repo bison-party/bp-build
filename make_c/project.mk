@@ -241,12 +241,14 @@ $(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(P
 # This is really just a trick to prevent unnecessary rebuilding of say a binary!
 
 MOD_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/lib$(mod).a)
-$(MOD_LIBS): $(MODS_INSTALL_DIR)/lib%.a: | $(PROJECT_PREFIX).lib.%
+$(MOD_LIBS): $(MODS_INSTALL_DIR)/lib%.a: $(PROJECT_PREFIX).lib.%
+	@echo > /dev/null
 
 MOD_LIBS_FLAGS := $(foreach mod,$(MOD_NAMES),-l$(mod))
 
 MOD_TEST_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/libtest_$(mod).a)
-$(MOD_TEST_LIBS): $(MODS_INSTALL_DIR)/libtest_%.a: | $(PROJECT_PREFIX).test_lib.%
+$(MOD_TEST_LIBS): $(MODS_INSTALL_DIR)/libtest_%.a: $(PROJECT_PREFIX).test_lib.%
+	@echo > /dev/null
 
 MOD_TEST_LIBS_FLAGS := $(foreach mod,$(MOD_NAMES),-ltest_$(mod))
 
