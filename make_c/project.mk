@@ -68,6 +68,12 @@
 # MOD_NAMES
 #  	 	Names of all modules. 	
 #
+# MODS_BUILD_DIR
+#  		$(BUILD_DIR)/mods
+#
+# MODS_INSTALL_DIR
+#  		$(BUILD_DIR)/install
+#
 # PROJECT_PREFIX
 #  		To prevent collision with targets in the including Makefile, all targets (except for `help`)
 #  		being with `$(PROJECT_PREFIX).`. 
@@ -77,9 +83,15 @@
 #  		NOTE: These have a declared target too! The intention is for the includer to use $(MOD_LIBS)
 #  		as a prerequisite in the including Makefile.
 #
+# MOD_LIBS_FLAGS
+#  		-l<mod_name> foreach mod name in MOD_NAMES.
+#
 # MOD_TEST_LIBS
 #  		This is a list of test static libraries.
 #  		These also have a declared target like $(MOD_LIBS).
+#
+# MOD_TEST_LIBS_FLAGS
+#  		-ltest_<mod_name> foreach mod name in MOD_NAMES.
 #
 # Exported Targets:
 #
@@ -156,6 +168,9 @@ help::
 MODS_BUILD_DIR := $(BUILD_DIR)/mods
 MODS_INSTALL_DIR := $(BUILD_DIR)/install
 
+$(BUILD_DIR) $(MODS_BUILD_DIR) $(MODS_INSTALL_DIR): 
+	$Qmkdir -p $@
+
 ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS)
 ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS)
 
@@ -228,8 +243,12 @@ $(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(P
 MOD_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/lib$(mod).a)
 $(MOD_LIBS): $(MODS_INSTALL_DIR)/lib%.a: $(PROJECT_PREFIX).lib.%
 
+MOD_LIBS_FLAGS := $(foreach mod,$(MOD_NAMES),-l$(mod))
+
 MOD_TEST_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/libtest_$(mod).a)
 $(MOD_TEST_LIBS): $(MODS_INSTALL_DIR)/libtest_%.a: $(PROJECT_PREFIX).test_lib.%
+
+MOD_TEST_LIBS_FLAGS := $(foreach mod,$(MOD_NAMES),-ltest_$(mod))
 
 help::
 	@echo -e ""
@@ -253,7 +272,7 @@ $(PROJECT_PREFIX).clean:
 
 help::
 	@echo -e ""
-	$(call USAGE_MSG,clean,delete build directory)
+	$(call USAGE_MSG,$(PROJECT_PREFIX).clean,delete build directory)
 
 
 
