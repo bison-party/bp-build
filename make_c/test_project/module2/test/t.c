@@ -1,6 +1,5 @@
 
 #include <stdbool.h>
-
 #include "other.h"
 #include "module2/f2.h"
 

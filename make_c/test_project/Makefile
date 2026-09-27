@@ -7,7 +7,7 @@ include $(GIT_TOP)/make_c/project.mk
 
 BIN := $(BUILD_DIR)/test
 
-$(BIN): $(MOD_LIBS) $(MOD_TEST_LIBS) | $(BUILD_DIR)
+$(BIN): $(MOD_LIBS) $(MOD_TEST_LIBS)
 	@echo "$(HLINE)"
 	$(call LINK_MSG,$@)
 	$Q$(COMPILER) -L$(MODS_INSTALL_DIR) \
@@ -19,9 +19,6 @@ $(BIN): $(MOD_LIBS) $(MOD_TEST_LIBS) | $(BUILD_DIR)
 
 .PHONY: bin
 bin: $(BIN)
-
-t:
-	@echo "$(MOD_LIBS) $(MOD_TEST_LIBS)"
 
 help::
 	$(call USAGE_MSG,bin,build project binary)
