@@ -152,9 +152,11 @@ PROJECT_PREFIX := p
 # This actually turned out to be quite confusing. How Make interprets non-explict patterned
 # targets is very weird. Especially if those targets are intended to be PHONY.
 #
-# Anyway, now there is a preset list of target which can be forwarded to modules.
+# Anyway, now there is a preset list of targets which can be forwarded to modules.
 MOD_FORWARD_TARGETS := \
+			   help \
 			   clangd \
+			   clangd_clean \
 			   lib \
 			   test_lib
 
@@ -176,15 +178,31 @@ $(foreach mod_path,$(MODS),$(eval $(call MOD_FORWARD_TARGETS_MACRO,$(mod_path)))
 
 FULL_ALL_FORWARD_TARGETS := $(addprefix $(PROJECT_PREFIX).,$(MOD_FORWARD_TARGETS))
 .PHONY: $(FULL_ALL_FORWARD_TARGETS)
-$(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MODS),$(PROJECT_PREFIX).%.$(notdir $(mod)))
+$(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(PROJECT_PREFIX).%.$(mod))
 
 help::
+	@echo -e ""
+	@echo -e "  $(STYLE_BOLD)module target forwarding$(STYLE_RESET)"
+	@echo -e "  project.mk allows certain targets to be invoked on modules directly from this"
+	@echo -e "  directory. To do so, use the following patterns."
+	@echo -e ""
 	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>.<mod>,invoke target <targ> on module <mod>)
-
-
-help::
 	$(call USAGE_MSG,$(PROJECT_PREFIX).<targ>,invoke target <targ> on all modules)
+	@echo -e ""
+	@echo -e "  <targ> \in $(STYLE_BOLD)$(MOD_FORWARD_TARGETS)$(STYLE_RESET)"
+	@echo -e "  <mod>  \in $(STYLE_BOLD)$(MOD_NAMES)$(STYLE_RESET)"
+	@echo -e ""
+	@echo -e "  If unsure what a value of <targ> does, invoke $(PROJECT_PREFIX).help.<mod>"
+	@echo -e "  for any valid value of <mod>. This will display module make targets."
+
+.PHONY: clean
+clean:
+	$(call CLEAN_MSG,$(BUILD_DIR))
+	$Qrm -rf $(BUILD_DIR)
 
 help::
-	@echo -e "  modules: $(STYLE_BOLD)$(MOD_NAMES)$(STYLE_RESET)"
+	@echo -e ""
+	$(call USAGE_MSG,clean,delete build directory)
+
+
 
