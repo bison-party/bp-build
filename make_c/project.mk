@@ -203,7 +203,6 @@ PROJECT_PREFIX := p
 #
 # Anyway, now there is a preset list of targets which can be forwarded to modules.
 MOD_FORWARD_TARGETS := \
-			   help \
 			   clangd \
 			   clangd_clean \
 			   lib \
@@ -239,6 +238,9 @@ $(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(P
 # $(MOD_LIBS) and/or $(MOD_TEST_LIBS) instead of the phony targets defined above!
 #
 # This is really just a trick to prevent unnecessary rebuilding of say a binary!
+#
+# NOTE: The @echo > /dev/null here is actually required. Otherwise, make will assume that the 
+# p.lib.% phony target will have no chance of modifying a .a file.
 
 MOD_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/lib$(mod).a)
 $(MOD_LIBS): $(MODS_INSTALL_DIR)/lib%.a: $(PROJECT_PREFIX).lib.%
