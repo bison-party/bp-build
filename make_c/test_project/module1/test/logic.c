@@ -2,14 +2,12 @@
 #include <stdbool.h>
 
 #include "module1/logic.h"
+#include "other.h"
 
-int test_logic(void) {
-    int asm_res = do_asm_logic();
-
-    if (do_logic(asm_res, asm_res) != 5) {
+int run_mod1_test(void) {
+    if (do_add(get_thing(), 1) != THING + 1) {
         return 1;
     }
-
 
     return 0;
 }

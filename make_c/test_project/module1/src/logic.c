@@ -1,5 +1,4 @@
 
-int do_logic(int x, int y) {
+int do_add(int x, int y) {
     return x + y;
-
 }

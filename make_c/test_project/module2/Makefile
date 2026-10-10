@@ -1,6 +1,6 @@
 GIT_TOP := $(shell git rev-parse --show-toplevel)
 
-C_SRC_NAMES := f1 f2
+C_SRC_NAMES := f1 f2 main
 S_SRC_NAMES := 
 C_TEST_SRC_NAMES := t
 

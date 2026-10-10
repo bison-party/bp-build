@@ -68,9 +68,30 @@
 # MOD_NAMES
 #  	 	Names of all modules. 	
 #
+# MODS_BUILD_DIR
+#  		$(BUILD_DIR)/mods
+#
+# MODS_INSTALL_DIR
+#  		$(BUILD_DIR)/install
+#
 # PROJECT_PREFIX
 #  		To prevent collision with targets in the including Makefile, all targets (except for `help`)
 #  		being with `$(PROJECT_PREFIX).`. 
+#
+# MOD_LIBS
+#  		This is a list of all non-test static libraries.
+#  		NOTE: These have a declared target too! The intention is for the includer to use $(MOD_LIBS)
+#  		as a prerequisite in the including Makefile.
+#
+# MOD_LIBS_FLAGS
+#  		-l<mod_name> foreach mod name in MOD_NAMES.
+#
+# MOD_TEST_LIBS
+#  		This is a list of test static libraries.
+#  		These also have a declared target like $(MOD_LIBS).
+#
+# MOD_TEST_LIBS_FLAGS
+#  		-ltest_<mod_name> foreach mod name in MOD_NAMES.
 #
 # Exported Targets:
 #
@@ -147,6 +168,9 @@ help::
 MODS_BUILD_DIR := $(BUILD_DIR)/mods
 MODS_INSTALL_DIR := $(BUILD_DIR)/install
 
+$(BUILD_DIR) $(MODS_BUILD_DIR) $(MODS_INSTALL_DIR): 
+	$Qmkdir -p $@
+
 ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS)
 ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS)
 
@@ -171,9 +195,6 @@ ifneq ($(words $(MOD_NAMES)),$(words $(sort $(MOD_NAMES))))
 $(error project module names must be unique)
 endif
 
-# Creative way to make a "kinda" static map in Make!
-# $(foreach mod_path,$(MODS),$(eval MOD_PATH_MAP_$(notdir $(mod_path)) := $(mod_path)))
-
 PROJECT_PREFIX := p
 
 # DESIGN NOTE: I used to have an abstract target forwarding scheme using pattern matching rules.
@@ -182,7 +203,6 @@ PROJECT_PREFIX := p
 #
 # Anyway, now there is a preset list of targets which can be forwarded to modules.
 MOD_FORWARD_TARGETS := \
-			   help \
 			   clangd \
 			   clangd_clean \
 			   lib \
@@ -209,6 +229,31 @@ FULL_ALL_FORWARD_TARGETS := $(addprefix $(PROJECT_PREFIX).,$(MOD_FORWARD_TARGETS
 .PHONY: $(FULL_ALL_FORWARD_TARGETS)
 $(FULL_ALL_FORWARD_TARGETS): $(PROJECT_PREFIX).%: $(foreach mod,$(MOD_NAMES),$(PROJECT_PREFIX).%.$(mod))
 
+# NOTE: The forward targets above are great when physically typing out a make command into the
+# terminal. However, when including this Makefile, you may want a target to depend on the
+# built module libraries. The below two target declarations tell Make that the forwarding targets
+# lib.<mod_name> test_lib.<mod_name> are special, and are known to generate static library files!
+#
+# If a target in the including Makefile requires the library files, its prerequisites can list
+# $(MOD_LIBS) and/or $(MOD_TEST_LIBS) instead of the phony targets defined above!
+#
+# This is really just a trick to prevent unnecessary rebuilding of say a binary!
+#
+# NOTE: The @echo > /dev/null here is actually required. Otherwise, make will assume that the 
+# p.lib.% phony target will have no chance of modifying a .a file.
+
+MOD_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/lib$(mod).a)
+$(MOD_LIBS): $(MODS_INSTALL_DIR)/lib%.a: $(PROJECT_PREFIX).lib.%
+	@echo > /dev/null
+
+MOD_LIBS_FLAGS := $(foreach mod,$(MOD_NAMES),-l$(mod))
+
+MOD_TEST_LIBS := $(foreach mod,$(MOD_NAMES),$(MODS_INSTALL_DIR)/libtest_$(mod).a)
+$(MOD_TEST_LIBS): $(MODS_INSTALL_DIR)/libtest_%.a: $(PROJECT_PREFIX).test_lib.%
+	@echo > /dev/null
+
+MOD_TEST_LIBS_FLAGS := $(foreach mod,$(MOD_NAMES),-ltest_$(mod))
+
 help::
 	@echo -e ""
 	@echo -e "  $(STYLE_BOLD)module target forwarding$(STYLE_RESET)"
@@ -231,7 +276,7 @@ $(PROJECT_PREFIX).clean:
 
 help::
 	@echo -e ""
-	$(call USAGE_MSG,clean,delete build directory)
+	$(call USAGE_MSG,$(PROJECT_PREFIX).clean,delete build directory)
 
 
 

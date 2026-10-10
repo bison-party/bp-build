@@ -1,8 +1,6 @@
 
 #include "module1/logic.h"
 
-#include "other.h"
-
-int f1(void) {
-    return do_asm_logic() + THING;
+int thing_plus_1(void) {
+    return get_thing() + 1;
 }
