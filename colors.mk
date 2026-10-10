@@ -109,6 +109,7 @@ ACTION_MSG = @printf "$(DATE_FMT) $2%-10.10s$(STYLE_RESET) $(STYLE_ITALIC)%s$(ST
 
 # Different action types which may be helpful!
 CLEAN_MSG 	= $(call ACTION_MSG,CLEAN,$(STYLE_BLUE),$1)
+DOCS_MSG 	= $(call ACTION_MSG,DOCS,$(STYLE_BLUE),$1)
 GEN_MSG   	= $(call ACTION_MSG,GEN,$(STYLE_GREEN),$1)
 DOTD_MSG   	= $(call ACTION_MSG,DOTD,$(STYLE_MAGENTA),$1)
 ASM_MSG   	= $(call ACTION_MSG,ASM,$(STYLE_RED),$1)
