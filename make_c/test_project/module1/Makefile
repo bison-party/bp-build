@@ -1,11 +1,19 @@
-
 ######################################## CONFIG_HDR Inputs #########################################
 
 # MODULE1_OFFSET
 #  		An integer which shifts the output of the `do_add` function.
 #  		Default value = 0.
 
+
+######################################## CONFIG_MK Inputs ##########################################
+
+# None
+
 ####################################################################################################
+
+ifdef CONFIG_MK
+include $(CONFIG_MK)
+endif
 
 GIT_TOP := $(shell git rev-parse --show-toplevel)
 

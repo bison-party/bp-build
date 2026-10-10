@@ -145,6 +145,18 @@
 
 CONFIG_HDR ?= $(CURDIR)/config.h
 
+# CONFIG_MK
+#  		A Configuration Makefile which is passed to all modules.
+#  		The intention is that a module `Makefile` includes `$(CONFIG_MK)` at the very top, 
+#  		and uses its options to determine how to build the module. For example, maybe an 
+#  		option determines what sources to compile.
+#
+#  		IMPORTANT: The effect of `CONFIG_MK` is very much user defined. Thus, I've decided not
+#  		to trigger any sort of recompilation on edits to `$(CONFIG_MK)`. If you edit the 
+#  		underlying configuration file, we'd expect a manual full clean before recompiling. 
+
+CONFIG_MK ?= $(CURDIR)/config.mk
+
 # BUILD_DIR
 #  		See BUILD_DIR benerated structure above.
 
@@ -186,6 +198,7 @@ MOD_MAKE := $(MAKE) --no-print-directory \
 			EXTRA_CFLAGS="$(ALL_CFLAGS)" \
  			EXTRA_SFLAGS="$(ALL_SFLAGS)" \
 			CONFIG_HDR=$(CONFIG_HDR) \
+			CONFIG_MK=$(CONFIG_MK) \
 			COMPILER=$(COMPILER) \
 			ARCHIVER=$(ARCHIVER)
 
