@@ -5,7 +5,7 @@
 #include "other.h"
 
 int run_mod1_test(void) {
-    if (do_add(get_thing(), 1) != THING + 1) {
+    if (do_add(get_thing(), 1) != THING + 1 + MODULE1_OFFSET) {
         return 1;
     }
 

@@ -140,6 +140,11 @@
 
 #################################### Dynamic/Static Inputs #########################################
 
+# CONFIG_HDR 
+# 		Config .h file to be passed to all modules.
+
+CONFIG_HDR ?= $(CURDIR)/config.h
+
 # BUILD_DIR
 #  		See BUILD_DIR benerated structure above.
 
@@ -180,6 +185,7 @@ MOD_MAKE := $(MAKE) --no-print-directory \
 			INSTALL_DIR=$(MODS_INSTALL_DIR) \
 			EXTRA_CFLAGS="$(ALL_CFLAGS)" \
  			EXTRA_SFLAGS="$(ALL_SFLAGS)" \
+			CONFIG_HDR=$(CONFIG_HDR) \
 			COMPILER=$(COMPILER) \
 			ARCHIVER=$(ARCHIVER)
 
