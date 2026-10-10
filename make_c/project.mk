@@ -182,10 +182,8 @@ help::
 	@echo -e "Make Targets for $(STYLE_BOLD)$(STYLE_BRIGHT_CYAN)$(PROJECT_NAME)$(STYLE_RESET)"
 	$(call USAGE_MSG,help,display this message)
 
-ABS_BUILD_DIR := $(abspath $(BUILD_DIR))
-
-MODS_BUILD_DIR := $(ABS_BUILD_DIR)/mods
-MODS_INSTALL_DIR := $(ABS_BUILD_DIR)/install
+MODS_BUILD_DIR := $(BUILD_DIR)/mods
+MODS_INSTALL_DIR := $(BUILD_DIR)/install
 
 $(BUILD_DIR) $(MODS_BUILD_DIR) $(MODS_INSTALL_DIR): 
 	$Qmkdir -p $@
@@ -199,8 +197,8 @@ MOD_MAKE := $(MAKE) --no-print-directory \
 			INSTALL_DIR=$(MODS_INSTALL_DIR) \
 			EXTRA_CFLAGS="$(ALL_CFLAGS)" \
  			EXTRA_SFLAGS="$(ALL_SFLAGS)" \
-			CONFIG_HDR=$(abspath $(CONFIG_HDR)) \
-			CONFIG_MK=$(abspath $(CONFIG_MK)) \
+			CONFIG_HDR=$(CONFIG_HDR) \
+			CONFIG_MK=$(CONFIG_MK) \
 			COMPILER=$(COMPILER) \
 			ARCHIVER=$(ARCHIVER)
 
