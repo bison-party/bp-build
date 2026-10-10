@@ -150,6 +150,11 @@
 
 ####################################### Dynamic Inputs #############################################
 
+# CONFIG_HDR
+#  		This is an optional argument. It should be a path to a .h file. When provided it will be 
+#  		included automatically when compiling all module sources. The intention is that a 
+#  		module may expose different options which determine how the module behaves!
+
 # BUILD_DIR 
 #  		See build directory structure above!
 #
@@ -235,10 +240,14 @@ includes:
 help::
 	$(call USAGE_MSG,includes,get all include directories needed to compile this module)
 
+ifdef CONFIG_HDR
+CONFIG_HDR_FLAG := --include=$(CONFIG_HDR)
+endif
+
 ALL_INCS_FLAGS 	:= $(addprefix -I,$(ALL_INCS))
 
-ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS) $(ALL_INCS_FLAGS)
-ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS) $(ALL_INCS_FLAGS)
+ALL_CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS) $(ALL_INCS_FLAGS) $(CONFIG_HDR_FLAG)
+ALL_SFLAGS := $(SFLAGS) $(EXTRA_SFLAGS) $(ALL_INCS_FLAGS) $(CONFIG_HDR_FLAG)
 
 CLANGD := $(CURDIR)/.clangd
 
@@ -343,11 +352,11 @@ C_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(C_PREFIX)%.o,$(C_SRC_NAMES))
 S_OBJS 			:= $(patsubst %,$(OBJS_DIR)/$(S_PREFIX)%.o,$(S_SRC_NAMES))
 C_TEST_OBJS  	:= $(patsubst %,$(OBJS_DIR)/$(C_TEST_PREFIX)%.o,$(C_TEST_SRC_NAMES))
 
-$(C_OBJS): $(OBJS_DIR)/$(C_PREFIX)%.o: | $(OBJS_DIR)
+$(C_OBJS): $(OBJS_DIR)/$(C_PREFIX)%.o: $(CONFIG_HDR) | $(OBJS_DIR)
 	$(call COMPILE_MSG,$(SRC_DIR)/$*.c)
 	$Q$(COMPILER) $(ALL_CFLAGS) -c $(SRC_DIR)/$*.c -o $@
 
-$(S_OBJS): $(OBJS_DIR)/$(S_PREFIX)%.o: | $(OBJS_DIR)
+$(S_OBJS): $(OBJS_DIR)/$(S_PREFIX)%.o: $(CONFIG_HDR) | $(OBJS_DIR)
 	$(call ASM_MSG,$(SRC_DIR)/$*.S)
 	$Q$(COMPILER) $(ALL_SFLAGS) -c $(SRC_DIR)/$*.S -o $@
 
@@ -358,7 +367,7 @@ objs: $(C_OBJS) $(S_OBJS)
 help::
 	$(call USAGE_MSG,objs,compile non-test objects)
 
-$(C_TEST_OBJS): $(OBJS_DIR)/$(C_TEST_PREFIX)%.o: | $(OBJS_DIR)
+$(C_TEST_OBJS): $(OBJS_DIR)/$(C_TEST_PREFIX)%.o: $(CONFIG_HDR) | $(OBJS_DIR)
 	$(call COMPILE_MSG,$(TEST_DIR)/$*.c)
 	$Q$(COMPILER) $(ALL_CFLAGS) -c $(TEST_DIR)/$*.c -o $@
 

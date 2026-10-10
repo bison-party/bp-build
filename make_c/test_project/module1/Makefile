@@ -1,3 +1,12 @@
+
+######################################## CONFIG_HDR Inputs #########################################
+
+# MODULE1_OFFSET
+#  		An integer which shifts the output of the `do_add` function.
+#  		Default value = 0.
+
+####################################################################################################
+
 GIT_TOP := $(shell git rev-parse --show-toplevel)
 
 C_SRC_NAMES := logic
