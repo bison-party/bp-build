@@ -298,7 +298,10 @@ DOXY_HTML_DIR := $(DOCS_DIR)/html
 .PHONY: $(DOXY_FILE)
 $(DOXY_FILE): | $(DOCS_DIR)
 	$(call GEN_MSG,$@)
-	$Qecho "INPUT = $(sort $(foreach mod,$(MODS),$(shell $(MOD_MAKE) -C $(mod) includes)))" > $@
+	$Qecho "# Doxygen Options" > $@
+	$Qecho "PROJECT_NAME = \"$(PROJECT_NAME)\"" >> $@
+	$Qecho "INPUT = $(sort $(foreach mod,$(MODS),$(shell $(MOD_MAKE) -C $(mod) includes)))" >> $@
+	@# TODO: Consider storing default options somewhere else.
 	$Qecho "FILE_PATTERNS = *.h" >> $@
 	$Qecho "EXTRACT_ALL = YES" >> $@
 	$Qecho "GENERATE_HTML = YES" >> $@
