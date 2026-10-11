@@ -2,6 +2,5 @@
 #include "module2/test/t.h"
 
 int main(void) {
-    return 1;
-    //return run_mod1_test() | run_mod2_test();
+    return run_mod1_test() | run_mod2_test();
 }
