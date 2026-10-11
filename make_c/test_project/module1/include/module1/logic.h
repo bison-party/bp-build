@@ -5,11 +5,20 @@
 #endif
 
 /**
- * Returns `x + y + MODULE1_OFFSET`
+ * @brief An addition function.
+ *
+ * Performs addition of `x`, `y`, and `MODULE1_OFFSET`.
+ *
+ * @param x a number
+ * @param y 
+ *  another number
+ *  __NOTE:__ A quick little note!
+ * @return `x + y + MODULE1_OFFSET`
  */
 int do_add(int x, int y);
 
 /**
- * Returns `THING` as defined in `other.h`.
+ * @brief get `THING`.
+ * @return `THING`
  */
 int get_thing(void);

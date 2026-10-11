@@ -37,6 +37,10 @@
 # BUILD_DIR Generated Structure:
 #
 # $(BUILD_DIR)/
+# 	docs/
+# 	  Doxyfile	
+# 	  html/
+# 	    ...
 #  	mods/
 #  	  <mod1>/
 #  	    ... mod1 build outputs ...
@@ -287,6 +291,37 @@ help::
 	@echo -e ""
 	@echo -e "  If unsure what a value of <targ> does, invoke $(PROJECT_PREFIX).help.<mod>"
 	@echo -e "  for any valid value of <mod>. This will display module make targets."
+
+DOCS_DIR := $(BUILD_DIR)/docs
+$(DOCS_DIR):
+	$Qmkdir -p $@
+
+DOXY_FILE := $(DOCS_DIR)/Doxyfile
+DOXY_HTML_DIR := $(DOCS_DIR)/html
+
+.PHONY: $(DOXY_FILE)
+$(DOXY_FILE): | $(DOCS_DIR)
+	$(call GEN_MSG,$@)
+	$Qecho "# Doxygen Options" > $@
+	$Qecho "PROJECT_NAME = \"$(PROJECT_NAME)\"" >> $@
+	$Qecho "INPUT = $(sort $(foreach mod,$(MODS),$(shell $(MOD_MAKE) -C $(mod) includes)))" >> $@
+	@# TODO: Consider storing default options somewhere else.
+	$Qecho "FILE_PATTERNS = *.h" >> $@
+	$Qecho "EXTRACT_ALL = YES" >> $@
+	$Qecho "GENERATE_HTML = YES" >> $@
+	$Qecho "GENERATE_LATEX = NO" >> $@
+	$Qecho "RECURSIVE = YES" >> $@
+	$Qecho "QUIET = YES" >> $@
+	$Qecho "HTML_OUTPUT = $(DOXY_HTML_DIR)" >> $@
+
+.PHONY: docs $(DOXY_HTML_DIR)
+$(DOXY_HTML_DIR): $(DOXY_FILE) | $(DOCS_DIR)
+	$(call DOCS_MSG,$@)
+	$Qrm -rf $(DOXY_HTML_DIR)
+	$Qdoxygen $(DOXY_FILE) 
+
+docs: $(DOXY_HTML_DIR)
+	@echo > /dev/null
 
 .PHONY: $(PROJECT_PREFIX).clean
 $(PROJECT_PREFIX).clean:

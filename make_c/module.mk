@@ -226,8 +226,13 @@ C_TEST_SRCS := $(patsubst %,$(TEST_DIR)/%.c,$(C_TEST_SRC_NAMES))
 # This is the list of targets that need these paths.
 DEPS_RES_TARGETS 	:= includes clangd dotds test_dotds objs test_objs lib test_lib
 
+# NOTE: That this will pass along all command line args! The only arg which should have the ability
+# to affect the result of the includes target though is CONFIG_MK. I pass it here explicitly
+# just to highlight this fact!
+#
+# WARNING: Make will actually continue just fine even if one of the below shell calls fail!
 ifneq ($(filter $(DEPS_RES_TARGETS),$(MAKECMDGOALS)),) 
-DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) includes))
+DEPS_INCS 		:= $(foreach dep,$(DEPS),$(shell $(MAKE) --no-print-directory -C $(dep) CONFIG_MK="$(CONFIG_MK)" includes))
 endif
 
 # Sort will take out repeats!
