@@ -87,16 +87,22 @@ GET_TIME = $(shell date '+%H:%M:%S')
 
 DATE_FMT := $(STYLE_BOLD)$(STYLE_BRIGHT_BLACK)%s$(STYLE_RESET)
 
+# $1 - Name of module
+# $2 - Name of target
+ifdef NOT_TERMINAL
+# If we are not in a terminal, there is no notion of terminal columns.
+ENTRANCE_MSG = printf "________________________________________"; \
+			   printf " Entering module $(STYLE_BOLD)%s$(STYLE_RESET) for target $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%s$(STYLE_RESET) \n" \
+			   "$1" "$2"
+else
 # Who knew you needed 4 dollar signs to double escape... smh.
 # This first calculates the length of the right algined entrance message without ansi codes.
 # Then uses that length for padding when actually printing to the console!
-#
-# $1 - Name of module
-# $2 - Name of target
 ENTRANCE_MSG = @plain_msg=" Entering module $1 for target $2 "; plain_msg_len=$$$${\#plain_msg}; \
 			   printf "%*.s" "$$$$(( $(shell tput cols) - $$$${plain_msg_len} ))" "" | tr " " "_"; \
 			   printf " Entering module $(STYLE_BOLD)%s$(STYLE_RESET) for target $(STYLE_BOLD)$(STYLE_BRIGHT_YELLOW)%s$(STYLE_RESET) \n" \
 			   "$1" "$2"
+endif
 
 HLINE = "$(shell printf "%*.s" "$(shell tput cols)" "" | tr " " "_")"
 
