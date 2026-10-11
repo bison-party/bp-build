@@ -13,8 +13,8 @@ jobs:
     - name: Check out repository code
       uses: actions/checkout@v6
 
-    - name: Install Doxygen
-      run: sudo apt-get install -y doxygen
+    - name: Install Doxygen and Graphviz
+      run: sudo apt-get install -y doxygen graphviz
 
     - name: Docs
       run: make -C make_c/test_project NOT_TERMINAL=1 docs
