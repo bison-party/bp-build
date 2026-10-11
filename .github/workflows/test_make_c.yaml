@@ -17,13 +17,13 @@ jobs:
       run: sudo apt-get install -y doxygen graphviz
 
     - name: Docs
-      run: make -C make_c/test_project NOT_TERMINAL=1 docs
+      run: make -C make-c/test-project NOT_TERMINAL=1 docs
 
     - name: Build
-      run: make -C make_c/test_project NOT_TERMINAL=1 bin
+      run: make -C make-c/test-project NOT_TERMINAL=1 bin
 
     - name: Run
-      run: make_c/test_project/build/test
+      run: make-c/test-project/build/test
 
     - name: Clean
-      run: make -C make_c/test_project NOT_TERMINAL=1 clean
+      run: make -C make-c/test-project NOT_TERMINAL=1 clean
