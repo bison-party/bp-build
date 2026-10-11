@@ -1,0 +1,29 @@
+name: Test Make C Tools
+
+on: 
+  push:
+    branches:
+      - "**"
+
+jobs:
+  test-make-c:
+    name: Test Make C Tools
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v6
+
+    - name: Install Doxygen and Graphviz
+      run: sudo apt-get install -y doxygen graphviz
+
+    - name: Docs
+      run: make -C make_c/test_project NOT_TERMINAL=1 docs
+
+    - name: Build
+      run: make -C make_c/test_project NOT_TERMINAL=1 bin
+
+    - name: Run
+      run: make_c/test_project/build/test
+
+    - name: Clean
+      run: make -C make_c/test_project NOT_TERMINAL=1 clean
