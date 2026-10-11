@@ -37,6 +37,10 @@
 # BUILD_DIR Generated Structure:
 #
 # $(BUILD_DIR)/
+# 	docs/
+# 	  Doxyfile	
+# 	  html/
+# 	    ...
 #  	mods/
 #  	  <mod1>/
 #  	    ... mod1 build outputs ...
