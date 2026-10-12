@@ -314,14 +314,19 @@ $(DOXY_FILE): | $(DOCS_DIR)
 	$Qecho "QUIET = YES" >> $@
 	$Qecho "HTML_OUTPUT = $(DOXY_HTML_DIR)" >> $@
 
-.PHONY: docs $(DOXY_HTML_DIR)
+.PHONY: $(PROJECT_PREFIX).docs $(DOXY_HTML_DIR)
 $(DOXY_HTML_DIR): $(DOXY_FILE) | $(DOCS_DIR)
 	$(call DOCS_MSG,$@)
 	$Qrm -rf $(DOXY_HTML_DIR)
 	$Qdoxygen $(DOXY_FILE) 
 
-docs: $(DOXY_HTML_DIR)
+$(PROJECT_PREFIX).docs: $(DOXY_HTML_DIR)
 	@echo > /dev/null
+
+help::
+	@echo -e ""
+	$(call USAGE_MSG,$(PROJECT_PREFIX).docs,generate docs)
+
 
 .PHONY: $(PROJECT_PREFIX).clean
 $(PROJECT_PREFIX).clean:
@@ -329,7 +334,6 @@ $(PROJECT_PREFIX).clean:
 	$Qrm -rf $(BUILD_DIR)
 
 help::
-	@echo -e ""
 	$(call USAGE_MSG,$(PROJECT_PREFIX).clean,delete build directory)
 
 

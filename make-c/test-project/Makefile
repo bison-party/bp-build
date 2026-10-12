@@ -21,11 +21,13 @@ $(BIN): $(MOD_LIBS) $(MOD_TEST_LIBS)
 bin: $(BIN)
 
 help::
+	@echo -e ""
 	$(call USAGE_MSG,bin,build project binary)
 
 
-.PHONY: clean
-clean: $(PROJECT_PREFIX).clean
+.PHONY: clean docs
+clean docs: %: $(PROJECT_PREFIX).%
 
 help::
+	$(call USAGE_MSG,docs,alias for $(PROJECT_PREFIX).docs)
 	$(call USAGE_MSG,clean,alias for $(PROJECT_PREFIX).clean)
